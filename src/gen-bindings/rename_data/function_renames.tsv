@@ -1,0 +1,39 @@
+# Columns: source name, target_name, comment
+############
+# Top-level
+############
+xexpf	Exp	Computes e^x
+xexpm1f	Expm1	Computes e^x - 1
+xpowf	Pow	Computes x^y
+
+############
+# Misc
+############
+vldexp_vf_vf_vi2	LdExp	Sets the exponent of 'x' to 2^e
+vldexp2_vf_vf_vi2	LoadExpShortReach	Sets the exponent of 'x' to 2^e. Short reach
+vpow2i_vf_vi2	Pow2I	Computes 2^x, where x is an integer.
+vadd_vf_3vf	Add3	Add (x + y) + z
+vadd_vf_4vf	Add4	Add ((x + y) + z) + w
+vsignbit_vo_vf	SignBitMask	Create a mask of which is true if x's sign bit is set
+vsignbit_vm_vf	SignBit	Extract the sign bit of x into an unsigned integer
+vmulsign_vf_vf_vf	MulSignBit	Calculate x * sign(y) with only bitwise logic
+
+############
+# Double double arithmetic
+# see (https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format#Double-double_arithmetic)
+############
+expk2f	ExpDF	Computes e^x in double-float precision (https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format#Double-double_arithmetic)
+expkf	ExpDF	Computes e^x in double-float precision (https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format#Double-double_arithmetic)
+logkf	LogDF	Computes ln(x) in double-float precision (https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format#Double-double_arithmetic)
+dfadd2_vf2_vf2_vf2	AddDF	Computes x + y in double-float precision
+dfadd2_vf2_vf2_vf	AddDF	Computes x + y in double-float precision
+dfadd2_vf2_vf_vf	AddDF	Computes x + y in double-float precision
+dfadd_vf2_vf2_vf2	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
+dfadd_vf2_vf_vf2	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
+dfmul_vf2_vf2_vf	MulDF	Computes x * y in double-float precision
+dfscale_vf2_vf2_vf	MulDF	Computes x * y in double-float precision
+dfmul_vf2_vf2_vf2	MulDF	Computes x * y in double-float precision
+dfdiv_vf2_vf2_vf2	DivDF	Computes x / y in double-float precision
+dfsqu_vf2_vf2	SquareDF	Computes x^2 in double-float precision
+vupper_vf_vf	LowerPrecision	Set the bottom 12 significand bits of a floating point number to 0 (used in some double-float math)
+dfnormalize_vf2_vf2	NormalizeDF	Normalizes a double-float precision representation (redistributes hi vs. lo value)

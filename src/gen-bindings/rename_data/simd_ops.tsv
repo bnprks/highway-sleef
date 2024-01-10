@@ -1,0 +1,90 @@
+# Source call -> translation
+# Note: this TSV allows comments and empty lines
+
+############
+# Arithmetic
+############
+vadd_vf_vf_vf(x, y)	Add(x, y)
+vadd_vi2_vi2_vi2(x, y)	Add(x, y)
+vsub_vi2_vi2_vi2(x, y)	Sub(x, y)
+vsub_vf_vf_vf(x, y)	Sub(x, y)
+vfma_vf_vf_vf_vf(x, y, z)	MulAdd(x, y, z)
+vmla_vf_vf_vf_vf(x, y, z)	MulAdd(x, y, z)
+vfmapn_vf_vf_vf_vf(x, y, z)	MulSub(x, y, z)
+vmul_vf_vf_vf(x, y)	Mul(x, y)
+vrec_vf_vf(x)	Div(Set(df, 1.0), x)
+
+vabs_vf_vf(x)	Abs(x)
+visinf_vo_vf(x)	IsInf(x)
+visnan_vo_vf(x)	IsNaN(x)
+vispinf_vo_vf(x)	Eq(x, Inf(df))
+
+vneg_vi2_vi2(x)	Neg(x)
+vneg_vf_vf(x)	Neg(x)
+vrint_vi2_vf(f)	NearestInt(f) # NOTE: This op is slower for Highway than for Sleef
+vtruncate_vf_vf(f)	Trunc(f)
+
+# These are used only with AVX512, so we just use intrinsics
+vgetexp_vf_vf(f)	_mm512_getexp_ps(f.raw)
+vgetmant_vf_vf(f)	_mm512_getmant_ps(f.raw, _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)
+
+
+############
+# Bitwise
+############
+vsll_vi2_vi2_i(x, c)	ShiftLeft<c>(x)
+vsra_vi2_vi2_i(x, c)	ShiftRight<c>(x)
+vsrl_vi2_vi2_i(x, c)	BitCast(di, ShiftRight<c>(BitCast(du, x))) # Convert to unsigned to get a logical shift
+
+vand_vi2_vi2_vi2(x, y)	And(x, y)
+vand_vm_vm_vm(x, y)	And(x, y)
+
+vandnot_vi2_vi2_vi2(x, y)	AndNot(x, y)
+
+vor_vi2_vi2_vi2(x, y)	Or(x, y)
+vxor_vm_vm_vm(x, y)	Xor(x, y)
+vgt_vi2_vi2_vi2(x, y)	VecFromMask(di, Gt(x, y))
+
+############
+# Masks
+############
+veq_vo_vi2_vi2(x, y)	Eq(x, y)
+veq_vo_vf_vf(x, y)	Eq(x, y)
+vgt_vo_vf_vf(x, y)	Gt(x, y)
+visnegzero_vo_vf(x)	Eq(x, Set(df, -0.0f))
+vlt_vo_vf_vf(x, y)	Lt(x, y)
+
+vand_vo_vo_vo(x, y)	And(x, y)
+vor_vo_vo_vo(x, y)	Or(x, y)
+vxor_vo_vo_vo(x, y)	Xor(x, y)
+
+vsel_vf_vo_vf_vf(m, x, y)	IfThenElse(m, x, y)
+vsel_vi2_vo_vi2_vi2(m, x, y)	IfThenElse(m, x, y)
+
+# Combining unsigned int masks with true masks is a bit tricky
+vor_vm_vo32_vm(m, x)	IfThenElse(m, Set(du, -1), x)
+vandnot_vm_vo32_vm(m, y)	IfThenZeroElse(RebindMask(du, m), y)
+
+############
+# Conversions
+############
+vcast_vf_f(f)	Set(df, f)
+vcast_vi2_i(i)	Set(di, i)
+vcast_vf_vi2(vi)	ConvertTo(df, vi)
+vtruncate_vi2_vf(f)	ConvertTo(di, f)
+
+vreinterpret_vf_vi2(i)	BitCast(df, i)
+vreinterpret_vf_vm(m)	BitCast(df, m)
+vreinterpret_vi2_vf(f)	BitCast(di, f)
+vreinterpret_vm_vf(m)	BitCast(du, m)
+
+############
+# Tuples
+############
+vf2getx_vf_vf2(f)	Get2<0>(f)
+vf2gety_vf_vf2(f)	Get2<1>(f)
+vf2setx_vf2_vf2_vf(f2, f)	Set2<0>(f2, f)
+vf2sety_vf2_vf2_vf(f2, f)	Set2<1>(f2, f)
+vcast_vf2_vf_vf(x, y)	Create2(df, x, y)
+vcast_vf2_f_f(x, y)	Create2(df, Set(df, x), Set(df, y))
+vf2setxy_vf2_vf_vf(x, y)	Create2(df, x, y)

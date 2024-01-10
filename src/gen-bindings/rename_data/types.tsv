@@ -1,0 +1,5 @@
+vint2	Vec<RebindToSigned<D>>
+vmask	Vec<RebindToUnsigned<D>>
+vopmask	Mask<D>
+vfloat	Vec<D>
+vfloat2	Vec2<D>

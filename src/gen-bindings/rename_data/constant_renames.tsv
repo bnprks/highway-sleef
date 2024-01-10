@@ -1,0 +1,8 @@
+# Constants that sleef #defines, translated with comments.
+# Columns are: sleef_name, new_name, type, comment
+SLEEF_FLT_MIN	FloatMin	float	Minimum normal float value
+L2Lf	Ln2Lo	float	Ln2Hi + Ln2Lo ~= ln(2)
+L2Uf	Ln2Hi	float	Ln2Hi + Ln2Lo ~= ln(2)
+R_LN2f	RLn2	float	1 / ln(2)
+SLEEF_INFINITYf	InfFloat	float	Floating point infinity
+SLEEF_NANf	NanFloat	float	Floating point NaN

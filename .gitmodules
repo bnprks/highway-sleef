@@ -1,0 +1,12 @@
+[submodule "highway"]
+	path = highway
+	url = https://github.com/google/highway
+[submodule "sleef"]
+	path = sleef
+	url = https://github.com/shibatch/sleef
+[submodule "tree-sitter/tree-sitter-c"]
+	path = tree-sitter/tree-sitter-c
+	url = https://github.com/tree-sitter/tree-sitter-c
+[submodule "tree-sitter/tree-sitter-cpp"]
+	path = tree-sitter/tree-sitter-cpp
+	url = https://github.com/tree-sitter/tree-sitter-cpp
