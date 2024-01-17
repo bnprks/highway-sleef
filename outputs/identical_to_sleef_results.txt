@@ -1,0 +1,30 @@
+Exp: all outputs match
+Expm1: all outputs match
+Log: all outputs match
+Log1p: all outputs match
+Log2: all outputs match
+Sin: found nan-mismatch: in = nan (0x7f94495d), sleef = nan (0x7fffffff) vs. translated = -nan (0xffffffff)
+Sin: all non-nan outputs match
+Cos: found nan-mismatch: in = nan (0x7f894d6a), sleef = nan (0x7fffffff) vs. translated = -nan (0xffffffff)
+Cos: all non-nan outputs match
+Tan: found nan-mismatch: in = nan (0x7f894d6a), sleef = nan (0x7fffffff) vs. translated = -nan (0xffffffff)
+Tan: all non-nan outputs match
+SinFast: all outputs match
+CosFast: all outputs match
+TanFast: all outputs match
+Sinh: all outputs match
+Cosh: all outputs match
+Tanh: all outputs match
+SinhFast: all outputs match
+CoshFast: all outputs match
+TanhFast: all outputs match
+Asin: all outputs match
+Acos: all outputs match
+Atan: all outputs match
+AsinFast: all outputs match
+AcosFast: found nan-mismatch: in = -10633823966279326983230456482242756608.000000 (0xfd000000), sleef = -nan (0xffc00000) vs. translated = nan (0x7fc00000)
+AcosFast: all non-nan outputs match
+AtanFast: all outputs match
+Asinh: all outputs match
+Acosh: all outputs match
+Atanh: all outputs match

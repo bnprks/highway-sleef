@@ -156,7 +156,8 @@ def main():
     for f in fns_to_translate:
         valid_nodes = [n for n, exclude in function_nodes[f] if not exclude]
         if len(valid_nodes) == 0:
-            print(f"WARNING: found 0 valid definitions and {len(function_nodes[f])} invalid definitions for function {f} (using first invalid)", file=sys.stderr)
+            if len(function_nodes[f]) > 1:
+                print(f"WARNING: found 0 valid definitions and {len(function_nodes[f])} invalid definitions for function {f} (using first invalid)", file=sys.stderr)
             node = function_nodes[f][0][0]
         else:
             node = valid_nodes[0]

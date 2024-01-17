@@ -26,6 +26,7 @@ add_custom_target(hwy_sleef_generated
         "${CMAKE_CURRENT_SOURCE_DIR}/rename_data"
         "${CMAKE_CURRENT_BINARY_DIR}/tree-sitter-grammars.so" 
         sleef-generated.h
+    COMMAND cp sleef-generated.h ${CMAKE_SOURCE_DIR}/outputs
     DEPENDS 
         "${CMAKE_CURRENT_SOURCE_DIR}/translate.py"
         "${CMAKE_CURRENT_BINARY_DIR}/tree-sitter-grammars.so" 

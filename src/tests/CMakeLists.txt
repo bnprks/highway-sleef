@@ -8,15 +8,26 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-enable_testing()
+FetchContent_Declare(
+  benchmark
+  URL https://github.com/google/benchmark/archive/e61e332df951b947e858011449a32c3ed5049db7.zip
+)
+FetchContent_MakeAvailable(benchmark)
+
 
 cmake_policy(SET CMP0069 NEW)
 include(CheckIPOSupported)
 check_ipo_supported(RESULT supported OUTPUT error)
 
-add_executable(all_floats all_floats.cc ${CMAKE_SOURCE_DIR}/src/gen-bindings/PayneHanekReductionTable.cc)
-add_dependencies(all_floats hwy_sleef_generated)
-set_target_properties(all_floats PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-target_link_libraries(all_floats PUBLIC hwy hwy_contrib profiler sleef)
-target_include_directories(all_floats PUBLIC "${CMAKE_BINARY_DIR}")
-target_compile_options(all_floats PUBLIC -ffp-contract=off -Wno-ignored-attributes -march=haswell -maes -O2 -g)
+list(APPEND TEST_TARGETS measure_ulp identical_to_sleef mismatch_test measure_speed)
+
+foreach(TARGET IN LISTS TEST_TARGETS)
+  add_executable(${TARGET} ${TARGET}.cc) # ${CMAKE_SOURCE_DIR}/src/gen-bindings/PayneHanekReductionTable.cc)
+  add_dependencies(${TARGET} hwy_sleef_generated)
+  set_target_properties(${TARGET} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+  target_link_libraries(${TARGET} PUBLIC hwy hwy_contrib profiler sleef)
+  target_include_directories(${TARGET} PUBLIC "${CMAKE_BINARY_DIR}")
+  target_compile_options(${TARGET} PUBLIC -ffp-contract=off -Wno-ignored-attributes -march=haswell -maes -O2 -g)
+endforeach()
+
+target_link_libraries(measure_speed PUBLIC benchmark::benchmark)

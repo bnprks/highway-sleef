@@ -1,0 +1,317 @@
+##########
+# Log1p
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.47          false  0x1.ffff7ep-7   0x1.fc0a1p-7
+translated       inf           true0x1.2ced34p+126            inf
+
+In-range stats: [0.000000,340282346638528859811704183484516925440.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.47           true  0x1.ffff7ep-7   0x1.fc0a1p-7
+translated       inf           true0x1.2ced34p+126            inf
+
+##########
+# Log1p
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.47          false  0x1.ffff7ep-7   0x1.fc0a1p-7
+translated       inf           true0x1.2ced34p+126            inf
+
+In-range stats: [-1.000000,99999996802856924650656260769173209088.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.47           true  0x1.ffff7ep-7   0x1.fc0a1p-7
+translated         1           true      -0x1p-149         0x0p+0
+
+##########
+# Log2
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             1.87          false  0x1.67ec62p+0   0x1.f757dp-2
+translated     0.992           true 0x1.ffff5p-129        -0x1p+7
+
+In-range stats: [0.000000,340282346638528859811704183484516925440.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             1.87           true  0x1.67ec62p+0   0x1.f757dp-2
+translated     0.992           true 0x1.ffff5p-129        -0x1p+7
+
+##########
+# Sin
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy              inf          false        0x1p+65           -inf
+translated      1.09           true 0x1.e8de24p+25 -0x1.000002p-1
+translated_fast      2.47           true 0x1.b76d24p+14 -0x1.ff3428p-3
+
+In-range stats: [-39000.000000,39000.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.47           true 0x1.b76d24p+14 -0x1.ff3428p-3
+translated     0.904           true  0x1.d0f182p+5  0x1.ffffdap-1
+translated_fast      2.47           true 0x1.b76d24p+14 -0x1.ff3428p-3
+
+##########
+# Cos
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy              inf          false 0x1.921fb6p+31           -inf
+translated      1.07           true 0x1.1d6a72p+29 -0x1.000002p-1
+translated_fast      2.49           true -0x1.1bc0d2p+6 -0x1.ff9372p-3
+
+In-range stats: [-39000.000000,39000.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.42           true-0x1.b1b464p+11  0x1.fe6928p-3
+translated     0.936           true -0x1.5875fep-9  0x1.ffff8ep-1
+translated_fast      2.49           true -0x1.1bc0d2p+6 -0x1.ff9372p-3
+
+##########
+# Tan
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+translated       1.4           true -0x1.c463acp+2 -0x1.000002p+0
+translated_fast      3.46           true  0x1.4aba06p+4 -0x1.f527cep+1
+
+In-range stats: [-39000.000000,39000.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+translated       1.4           true -0x1.c463acp+2 -0x1.000002p+0
+translated_fast      3.46           true  0x1.4aba06p+4 -0x1.f527cep+1
+
+##########
+# Sinh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy              3.4           true  0x1.ffbc3cp-8  0x1.ffbd8ap-8
+translated       inf           true  -0x1.62e43p+6           -inf
+translated_fast       inf           true -0x1.600002p+6           -inf
+
+In-range stats: [-88.722801,88.722801]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy              3.4           true  0x1.ffbc3cp-8  0x1.ffbd8ap-8
+translated         1           true 0x1.000402p-24 0x1.000404p-24
+translated_fast       inf           true -0x1.600002p+6           -inf
+
+##########
+# Sinh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy              3.4           true  0x1.ffbc3cp-8  0x1.ffbd8ap-8
+translated       inf           true   0x1.62e43p+6            inf
+translated_fast       inf           true  0x1.600002p+6            inf
+
+In-range stats: [-89.000000,89.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy              3.4           true  0x1.ffbc3cp-8  0x1.ffbd8ap-8
+translated       inf           true   0x1.62e43p+6            inf
+translated_fast       inf           true  0x1.600002p+6            inf
+
+##########
+# Sinh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy              3.4           true  0x1.ffbc3cp-8  0x1.ffbd8ap-8
+translated       inf           true   0x1.62e43p+6            inf
+translated_fast       inf           true  0x1.600002p+6            inf
+
+In-range stats: [-88.000000,88.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy              3.4           true  0x1.ffbc3cp-8  0x1.ffbd8ap-8
+translated         1           true-0x1.000402p-24-0x1.000404p-24
+translated_fast       3.4           true  0x1.ffbc3cp-8  0x1.ffbd8ap-8
+
+##########
+# Cosh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+translated       inf           true   0x1.62e43p+6            inf
+translated_fast       inf           true  0x1.600002p+6            inf
+
+In-range stats: [-89.000000,89.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+translated       inf           true   0x1.62e43p+6            inf
+translated_fast       inf           true  0x1.600002p+6            inf
+
+##########
+# Cosh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+translated       inf           true   0x1.62e43p+6            inf
+translated_fast       inf           true  0x1.600002p+6            inf
+
+In-range stats: [-88.000000,88.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+translated     0.503           true   0x1.27cbcp+4  0x1.97b9cp+25
+translated_fast      1.45           true  0x1.4fb3fep+2  0x1.7b610cp+6
+
+##########
+# Tanh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.86           true -0x1.65aabep-3 -0x1.62130ep-3
+translated         1           true-0x1.3b29eap-24-0x1.3b29ecp-24
+translated_fast      2.86           true -0x1.65aabep-3 -0x1.62130ep-3
+
+In-range stats: [-340282346638528859811704183484516925440.000000,340282346638528859811704183484516925440.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.86           true -0x1.65aabep-3 -0x1.62130ep-3
+translated         1           true-0x1.3b29eap-24-0x1.3b29ecp-24
+translated_fast      2.86           true -0x1.65aabep-3 -0x1.62130ep-3
+
+##########
+# Asin
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.47           true -0x1.0047b4p-1 -0x1.0c67f8p-1
+translated     0.981           true -0x1.aed54ap-1        -0x1p+0
+translated_fast      2.43           true -0x1.00200ap-1 -0x1.0c3a28p-1
+
+In-range stats: [-1.000000,1.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.47           true -0x1.0047b4p-1 -0x1.0c67f8p-1
+translated     0.981           true -0x1.aed54ap-1        -0x1p+0
+translated_fast      2.43           true -0x1.00200ap-1 -0x1.0c3a28p-1
+
+##########
+# Acos
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             1.28           true -0x1.007356p-1  0x1.0c3674p+1
+translated     0.694           true  0x1.174798p-1  0x1.fcd9c2p-1
+translated_fast      1.28           true -0x1.007356p-1  0x1.0c3674p+1
+
+In-range stats: [-1.000000,1.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             1.28           true -0x1.007356p-1  0x1.0c3674p+1
+translated     0.694           true  0x1.174798p-1  0x1.fcd9c2p-1
+translated_fast      1.28           true -0x1.007356p-1  0x1.0c3674p+1
+
+##########
+# Atan
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.65           true -0x1.02d0a2p+0 -0x1.94ec6ap-1
+translated     0.938           true -0x1.0190d2p+0  -0x1.93af5p-1
+translated_fast      2.64           true -0x1.03cb0ap+0 -0x1.95e39cp-1
+
+In-range stats: [-340282346638528859811704183484516925440.000000,340282346638528859811704183484516925440.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             2.65           true -0x1.02d0a2p+0 -0x1.94ec6ap-1
+translated     0.938           true -0x1.0190d2p+0  -0x1.93af5p-1
+translated_fast      2.64           true -0x1.03cb0ap+0 -0x1.95e39cp-1
+
+##########
+# Asinh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.27          false -0x1.f8da3cp-5 -0x1.f8888ap-5
+translated       inf           true        0x1p+65            inf
+
+In-range stats: [-340282346638528859811704183484516925440.000000,340282346638528859811704183484516925440.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.27           true -0x1.f8da3cp-5 -0x1.f8888ap-5
+translated       inf           true        0x1p+65            inf
+
+##########
+# Asinh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.27          false -0x1.f8da3cp-5 -0x1.f8888ap-5
+translated       inf           true        0x1p+64            inf
+
+In-range stats: [-18446742974197923840.000000,18446742974197923840.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.27           true -0x1.f8da3cp-5 -0x1.f8888ap-5
+translated         1           true-0x1.251152p-25-0x1.251154p-25
+
+##########
+# Acosh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.43          false  0x1.01f7dep+0  0x1.fb97b2p-4
+translated       inf           true        0x1p+65            inf
+
+In-range stats: [1.000000,340282346638528859811704183484516925440.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.43           true  0x1.01f7dep+0  0x1.fb97b2p-4
+translated       inf           true        0x1p+65            inf
+
+##########
+# Acosh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.43          false  0x1.01f7dep+0  0x1.fb97b2p-4
+translated       inf           true        0x1p+64            inf
+
+In-range stats: [1.000000,18446742974197923840.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.43           true  0x1.01f7dep+0  0x1.fb97b2p-4
+translated     0.512           true  0x1.1376cep+0  0x1.8cd2ecp-2
+
+##########
+# Atanh
+##########
+Global stats:
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.22          false-0x1.eaba16p-10-0x1.eaba42p-10
+translated         1           true 0x1.f5212ap-25 0x1.f52128p-25
+
+In-range stats: [-1.000000,1.000000]
+Method       Max ULP   Preserve NaN    Worst input   Worst output
+----------------------------------------------------------------
+hwy             3.22           true-0x1.eaba16p-10-0x1.eaba42p-10
+translated         1           true 0x1.f5212ap-25 0x1.f52128p-25

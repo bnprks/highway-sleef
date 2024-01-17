@@ -1,0 +1,47 @@
+import argparse
+import collections
+import json
+import math
+import re
+
+def main():
+    parser = argparse.ArgumentParser(description="Convert results from measure_speed --benchmark_format=json to tsv table")
+    parser.add_argument("input_json", help="Path of json from measure_speed --benchmark_format=json")
+    args = parser.parse_args()
+
+    data = json.load(open(args.input_json))
+
+    NUMS_PER_ITERATION = 1 <<12
+
+    timing_data = collections.defaultdict(lambda: collections.defaultdict(lambda: math.nan))
+
+    name_pattern = re.compile(r"BM_op/(?P<op>[A-Z][a-z0-9]+)(?P<tool>(Fast)?(Sleef|Translated|Hwy))")
+
+    for b in data["benchmarks"]:
+        assert b["time_unit"] == "ns"
+
+        name_info = name_pattern.match(b["name"]).groupdict()
+        op_name = name_info["op"]
+        run_version = 1
+        while name_info["tool"] in timing_data[op_name]:
+            run_version += 1
+            op_name = name_info["op"] + "v" + str(run_version)
+        
+        timing_data[op_name][name_info["tool"]] = b["cpu_time"]
+
+    print("Tool\tRange tested\tHwy\tTranslated 1 ULP\tSleef 1 ULP\tTranslated 3.5 ULP\tSleef 3.5 ULP")
+
+    for op, d in timing_data.items():
+        raw_time = [d['Hwy'], d['Translated'], d['Sleef'], d['FastTranslated'], d['FastSleef']]
+        per_elem = [x/NUMS_PER_ITERATION for x in raw_time]
+        reference = min(x for x in raw_time if not math.isnan(x))
+        relative = [x / reference for x in raw_time]
+
+        entries = "\t".join([f"{x:.1f} ns ({y*100:.0f}%)" if not math.isnan(x) else "N/A" for x, y in zip(per_elem, relative)])
+        print(f"{op}\t\t{entries}")
+
+
+    
+
+if __name__ == "__main__":
+    main()
