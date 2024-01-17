@@ -1,0 +1,26 @@
+Except as otherwise noded (below and/or in individual files), 
+Highway-Sleef is licensed under the 
+Apache License, Version 2.0 <LICENSE-APACHE> or <http://www.apache.org/licenses/LICENSE-2.0>, or the
+MIT license <LICENSE-MIT> or <http://opensource.org/licenses/MIT>, or the
+Boost Software License 1.0 <LICENSE-BOOST> or <http://www.boost.org/LICENSE_1_0.txt>,
+at your option.
+
+Copyright 2024, Highway-Sleef contributors.
+Copyrights are maintained by contributors.
+
+
+------------------------------------------------------------------------------
+Highway
+
+highway/*: Apache-2.0, and BSD-3-Clause
+Copyright 2019-2023 Google LLC
+License: listed in highway/LICENSE and highway/LICENSE-BSD3
+URL: https://github.com/google/highway
+
+------------------------------------------------------------------------------
+Sleef
+
+sleef/*: Boost Software License
+Copyright Naoki Shibata 2010-2021
+License: http://www.boost.org/LICENSE_1_0.txt
+URL: https://github.com/shibatch/sleef
