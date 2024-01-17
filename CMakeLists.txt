@@ -8,8 +8,11 @@ set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs")
 set(BUILD_LIBM OFF CACHE BOOL "libsleef will be built.")
 set(BUILD_GNUABI_LIBS OFF CACHE BOOL "libsleefgnuabi will be built.")
 set(BUILD_TESTS OFF CACHE BOOL "Tests will be built.")
+set(ENABLE_LTO ON CACHE BOOL "Enable LTO on GCC or ThinLTO on clang")
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libs")
 set(BUILD_INLINE_HEADERS ON CACHE BOOL "Build header for inlining whole SLEEF functions")
 add_subdirectory("sleef")
+target_include_directories(sleef INTERFACE "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/sleef/include>")
 
 # Cut out as much of the highway build as possible
 set(HWY_ENABLE_CONTRIB OFF CACHE BOOL "Include contrib/")

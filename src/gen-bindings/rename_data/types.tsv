@@ -3,3 +3,5 @@ vmask	Vec<RebindToUnsigned<D>>
 vopmask	Mask<D>
 vfloat	Vec<D>
 vfloat2	Vec2<D>
+fi_t	Vec2<D>
+dfi_t	Vec3<D>

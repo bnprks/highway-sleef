@@ -2,38 +2,95 @@
 ############
 # Top-level
 ############
+
+# Single-argument exponential
 xexpf	Exp	Computes e^x
 xexpm1f	Expm1	Computes e^x - 1
+xlogf_u1	Log	Computes ln(x) with 1.0 ULP accuracy
+xlogf	LogFast	Computes ln(x) with 3.5 ULP accuracy
+xlog1pf	Log1p	Computes log1p(x) with 1.0 ULP accuracy
+xlog2f	Log2	Computes log2(x) with 1.0 ULP accuracy
+
+
+expm1fk	Expm1Fast	Computes e^x - 1 faster with lower precision
 xpowf	Pow	Computes x^y
+
+# Single-argument Trig
+xsinf_u1	Sin	Computes sin(x) with 1.0 ULP accuracy
+xcosf_u1	Cos	Computes cos(x) with 1.0 ULP accuracy
+xtanf_u1	Tan	Computes tan(x) with 1.0 ULP accuracy
+xsinf	SinFast	Computes sin(x) with 3.5 ULP accuracy
+xcosf	CosFast	Computes cos(x) with 3.5 ULP accuracy
+xtanf	TanFast	Computes tan(x) with 3.5 ULP accuracy
+
+xsinhf	Sinh	Computes sinh(x) with 1.0 ULP accuracy
+xcoshf	Cosh	Computes cosh(x) with 1.0 ULP accuracy
+xtanhf	Tanh	Computes tanh(x) with 1.0 ULP accuracy
+xsinhf_u35	SinhFast	Computes sinh(x) with 3.5 ULP accuracy
+xcoshf_u35	CoshFast	Computes cosh(x) with 3.5 ULP accuracy
+xtanhf_u35	TanhFast	Computes tanh(x) with 3.5 ULP accuracy
+
+xacosf_u1	Acos	Computes acos(x) with 1.0 ULP accuracy
+xasinf_u1	Asin	Computes asin(x) with 1.0 ULP accuracy
+xatanf_u1	Atan	Computes atan(x) with 1.0 ULP accuracy
+xacosf	AcosFast	Computes acos(x) with 3.5 ULP accuracy
+xasinf	AsinFast	Computes asin(x) with 3.5 ULP accuracy
+xatanf	AtanFast	Computes atan(x) with 3.5 ULP accuracy
+
+xasinhf	Asinh	Computes asinh(x) with 1 ULP accuracy
+xacoshf	Acosh	Computes acosh(x) with 1 ULP accuracy
+xatanhf	Atanh	Computes atanh(x) with 1 ULP accuracy
 
 ############
 # Misc
 ############
-vldexp_vf_vf_vi2	LdExp	Sets the exponent of 'x' to 2^e
-vldexp2_vf_vf_vi2	LoadExpShortReach	Sets the exponent of 'x' to 2^e. Short reach
+vldexp_vf_vf_vi2	LoadExp	Sets the exponent of 'x' to 2^e
+vldexp2_vf_vf_vi2	LoadExp2	Sets the exponent of 'x' to 2^e. Fast, but "short reach"
+vldexp3_vf_vf_vi2	LoadExp3	Sets the exponent of 'x' to 2^e. Very fast, "no denormal"
+vilogbk_vi2_vf	ILogB	Integer log of x
+vilogb2k_vi2_vf	ILogB2	Integer log of x, "but the argument must be a normalized value"
 vpow2i_vf_vi2	Pow2I	Computes 2^x, where x is an integer.
 vadd_vf_3vf	Add3	Add (x + y) + z
 vadd_vf_4vf	Add4	Add ((x + y) + z) + w
 vsignbit_vo_vf	SignBitMask	Create a mask of which is true if x's sign bit is set
 vsignbit_vm_vf	SignBit	Extract the sign bit of x into an unsigned integer
+vsel_vi2_vf_vi2	SignBitOrZero	Zero out x when the sign bit of d is not set
+vorsign_vf_vf_vf	OrSignBit	Bitwise or of x with sign bit of y
 vmulsign_vf_vf_vf	MulSignBit	Calculate x * sign(y) with only bitwise logic
+rempif	PayneHanekReduction	Calculate Payne Hanek reduction. This appears to return ((2*x/pi) - round(2*x/pi)) * pi / 2 and the integer quadrant of x in range -2 to 2 (0 is [-pi/4, pi/4], 2/-2 are from [3pi/4, 5pi/4] with the sign flip a little after pi).
+rempisubf	PayneHanekReductionHelper	Helper for Payne Hanek reduction.
 
 ############
 # Double double arithmetic
 # see (https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format#Double-double_arithmetic)
 ############
-expk2f	ExpDF	Computes e^x in double-float precision (https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format#Double-double_arithmetic)
-expkf	ExpDF	Computes e^x in double-float precision (https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format#Double-double_arithmetic)
-logkf	LogDF	Computes ln(x) in double-float precision (https://en.wikipedia.org/wiki/Quadruple-precision_floating-point_format#Double-double_arithmetic)
+expk2f	ExpDF	Computes e^x in double-float precision
+expkf	ExpDF_float	Computes e^x in double-float precision
+logkf	LogDF	Computes ln(x) in double-float precision (version 1)
+logk2f	LogFastDF	Computes ln(x) in double-float precision (version 2)
 dfadd2_vf2_vf2_vf2	AddDF	Computes x + y in double-float precision
 dfadd2_vf2_vf2_vf	AddDF	Computes x + y in double-float precision
+dfadd2_vf2_vf_vf2	AddDF	Computes x + y in double-float precision
 dfadd2_vf2_vf_vf	AddDF	Computes x + y in double-float precision
 dfadd_vf2_vf2_vf2	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
 dfadd_vf2_vf_vf2	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
+dfadd_vf2_vf2_vf	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
+dfadd_vf2_vf_vf	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
+dfsub_vf2_vf2_vf2	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
+dfsub_vf2_vf2_vf	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
+dfrec_vf2_vf2	RecDF	Computes 1/x in double-float precision
+dfrec_vf2_vf	RecDF	Computes 1/x in double-float precision
+dfneg_vf2_vf2	NegDF	Computes -x in double-float precision
+dfscale_vf2_vf2_vf	ScaleDF	Computes x * y in double-float precision
 dfmul_vf2_vf2_vf	MulDF	Computes x * y in double-float precision
-dfscale_vf2_vf2_vf	MulDF	Computes x * y in double-float precision
 dfmul_vf2_vf2_vf2	MulDF	Computes x * y in double-float precision
+dfmul_vf2_vf_vf	MulDF	Computes x * y in double-float precision
+dfmul_vf_vf2_vf2	MulDF_float	Computes x * y in double-float precision, returning result as single-precision
 dfdiv_vf2_vf2_vf2	DivDF	Computes x / y in double-float precision
 dfsqu_vf2_vf2	SquareDF	Computes x^2 in double-float precision
+dfsqrt_vf2_vf	SqrtDF	Computes sqrt(x) in double-float precision
+dfsqrt_vf2_vf2	SqrtDF	Computes sqrt(x) in double-float precision
+vsel_vf2_vo_vf2_vf2	IfThenElse	Specialization of IfThenElse to double-float operands
 vupper_vf_vf	LowerPrecision	Set the bottom 12 significand bits of a floating point number to 0 (used in some double-float math)
 dfnormalize_vf2_vf2	NormalizeDF	Normalizes a double-float precision representation (redistributes hi vs. lo value)
+atan2kf_u1	ATan2DF	atan2(x, y) in double-float precision

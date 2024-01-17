@@ -11,8 +11,11 @@ vsub_vf_vf_vf(x, y)	Sub(x, y)
 vfma_vf_vf_vf_vf(x, y, z)	MulAdd(x, y, z)
 vmla_vf_vf_vf_vf(x, y, z)	MulAdd(x, y, z)
 vfmapn_vf_vf_vf_vf(x, y, z)	MulSub(x, y, z)
+vfmanp_vf_vf_vf_vf(x, y, z)	NegMulAdd(x, y, z)
 vmul_vf_vf_vf(x, y)	Mul(x, y)
 vrec_vf_vf(x)	Div(Set(df, 1.0), x)
+vdiv_vf_vf_vf(x, y)	Div(x, y)
+vsqrt_vf_vf(x)	Sqrt(x)
 
 vabs_vf_vf(x)	Abs(x)
 visinf_vo_vf(x)	IsInf(x)
@@ -22,6 +25,7 @@ vispinf_vo_vf(x)	Eq(x, Inf(df))
 vneg_vi2_vi2(x)	Neg(x)
 vneg_vf_vf(x)	Neg(x)
 vrint_vi2_vf(f)	NearestInt(f) # NOTE: This op is slower for Highway than for Sleef
+vrint_vf_vf(f)	Round(f)
 vtruncate_vf_vf(f)	Trunc(f)
 
 # These are used only with AVX512, so we just use intrinsics
@@ -42,28 +46,36 @@ vand_vm_vm_vm(x, y)	And(x, y)
 vandnot_vi2_vi2_vi2(x, y)	AndNot(x, y)
 
 vor_vi2_vi2_vi2(x, y)	Or(x, y)
+vor_vm_vm_vm(x, y)	Or(x, y)
 vxor_vm_vm_vm(x, y)	Xor(x, y)
 vgt_vi2_vi2_vi2(x, y)	VecFromMask(di, Gt(x, y))
 
 ############
 # Masks
 ############
-veq_vo_vi2_vi2(x, y)	Eq(x, y)
+veq_vo_vi2_vi2(x, y)	RebindMask(df, Eq(x, y))
 veq_vo_vf_vf(x, y)	Eq(x, y)
 vgt_vo_vf_vf(x, y)	Gt(x, y)
-visnegzero_vo_vf(x)	Eq(x, Set(df, -0.0f))
+vgt_vo_vi2_vi2(x, y)	Gt(x, y)
+visnegzero_vo_vf(x)	Eq(BitCast(du, x), Set(du, 0x80000000))
 vlt_vo_vf_vf(x, y)	Lt(x, y)
 
 vand_vo_vo_vo(x, y)	And(x, y)
 vor_vo_vo_vo(x, y)	Or(x, y)
 vxor_vo_vo_vo(x, y)	Xor(x, y)
+vandnot_vo_vo_vo(x, y)	AndNot(x, y)
 
-vsel_vf_vo_vf_vf(m, x, y)	IfThenElse(m, x, y)
-vsel_vi2_vo_vi2_vi2(m, x, y)	IfThenElse(m, x, y)
+vsel_vf_vo_vf_vf(m, x, y)	IfThenElse(RebindMask(df, m), x, y)
+vsel_vi2_vo_vi2_vi2(m, x, y)	IfThenElse(RebindMask(di, m), x, y)
+vsel_vi2_vf_vf_vi2_vi2(f0, f1, x, y)	IfThenElse(RebindMask(di, Lt(f0, f1)), x, y)
+
+vtestallones_i_vo32(m)	AllTrue(df, RebindMask(df, m))
 
 # Combining unsigned int masks with true masks is a bit tricky
-vor_vm_vo32_vm(m, x)	IfThenElse(m, Set(du, -1), x)
+vor_vm_vo32_vm(m, x)	IfThenElse(RebindMask(du, m), Set(du, -1), x)
 vandnot_vm_vo32_vm(m, y)	IfThenZeroElse(RebindMask(du, m), y)
+vand_vm_vo32_vm(m, y)	IfThenElseZero(RebindMask(du, m), y)
+vand_vi2_vo_vi2(m, y)	IfThenElseZero(RebindMask(di, m), y)
 
 ############
 # Conversions
@@ -79,7 +91,7 @@ vreinterpret_vi2_vf(f)	BitCast(di, f)
 vreinterpret_vm_vf(m)	BitCast(du, m)
 
 ############
-# Tuples
+# 2-float Tuples
 ############
 vf2getx_vf_vf2(f)	Get2<0>(f)
 vf2gety_vf_vf2(f)	Get2<1>(f)
@@ -88,3 +100,28 @@ vf2sety_vf2_vf2_vf(f2, f)	Set2<1>(f2, f)
 vcast_vf2_vf_vf(x, y)	Create2(df, x, y)
 vcast_vf2_f_f(x, y)	Create2(df, Set(df, x), Set(df, y))
 vf2setxy_vf2_vf_vf(x, y)	Create2(df, x, y)
+
+############
+# (float, int) Tuples
+############
+figeti_vi2_di(fi)	BitCast(di, Get2<1>(fi))
+figetd_vf_di(fi)	Get2<0>(fi)
+fisetdi_fi_vf_vi2(f, i)	Create2(df, f, BitCast(df, i))
+
+############
+# 2-float + int Tuples (float, float, int)
+############
+dfisetdf_dfi_dfi_vf2(f2i, f2)	Set3<0>(Set3<1>(f2i, Get2<1>(f2)), Get2<0>(f2))  # Set the 2-float portion
+dfigeti_vi2_dfi(f2i)	BitCast(di, Get3<2>(f2i))                            # Get the int portion
+dfigetdf_vf2_dfi(f2i)	Create2(df, Get3<0>(f2i), Get3<1>(f2i))              # Get the 2-float portion
+dfisetdfi_dfi_vf2_vi2(f2, i)	Create3(df, Get2<0>(f2), Get2<1>(f2), BitCast(df, i)) # Set the full value
+
+############
+# Misc
+############
+LIKELY(x)	HWY_LIKELY(x)
+vgather_vf_p_vi2(ptr, idx)	GatherIndex(df, ptr, idx)
+
+# Sleef's implementation of Estrin's method uses pre-computed x^2 and x^4
+POLY6(x, x2, x4, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5))
+POLY8(x, x2, x4, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7))

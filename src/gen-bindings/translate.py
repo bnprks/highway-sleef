@@ -17,6 +17,8 @@ type_translations = {}
 constant_translations = {}
 constant_types = {}
 constant_comments = {}
+macro_conditionals = {}
+macro_conditional_translations = {}
 
 def main():
     parser = argparse.ArgumentParser(
@@ -35,9 +37,39 @@ def main():
 
     set_treesitter_lib(args.treesitter_lib)
 
+    target_functions = [
+        "xexpf",
+        "xexpm1f",
+        "xlogf_u1",
+        "xlogf",
+        "xlog1pf",
+        "xlog2f",
+        "xsinf_u1",
+        "xcosf_u1",
+        "xtanf_u1",
+        "xsinf",
+        "xcosf",
+        "xtanf",
+        "xsinhf",
+        "xcoshf",
+        "xtanhf",
+        "xsinhf_u35",
+        "xcoshf_u35",
+        "xtanhf_u35",
+        "xacosf_u1",
+        "xasinf_u1",
+        "xasinhf",
+        "xacosf",
+        "xasinf",
+        "xatanf",
+        "xacoshf",
+        "xatanf_u1",
+        "xatanhf",
+    ]
+
     # Read data files to register translations for simd ops, intermediate functions, and types
     for old_name, new_name, comment in parse_tsv(rename_data / "function_renames.tsv", 3):
-        key, translate_fn = function_rename_translator(old_name, new_name)
+        key, translate_fn = function_rename_translator(old_name, new_name, old_name in target_functions)
         fn_call_translations[key] = translate_fn
         fn_decl_translations[key] = translate_fn
         fn_comments[key.decode()] = comment
@@ -56,6 +88,11 @@ def main():
         constant_types[key] = type.encode()
         constant_comments[key] = comment.encode()
 
+    for in_condition, out_condition in parse_tsv(rename_data / "macro_conditionals.tsv", 2):
+        macro_conditionals[in_condition] = out_condition
+        key, translate_fn = macro_conditonal_translator(in_condition, out_condition)
+        macro_conditional_translations[key] = translate_fn
+
     text = b"\n".join([
         open(sleef_src / "libm/sleefsimdsp.c", "rb").read(),
         open(sleef_src / "common/df.h", "rb").read(),
@@ -66,7 +103,7 @@ def main():
     source_file = {}
     trees = {}
 
-    function_nodes = {}
+    function_nodes = collections.defaultdict(list) # name: [(node, exclude_bool)]
     for s in sources:
         text = open(sleef_src / s, "rb").read()
         
@@ -78,10 +115,22 @@ def main():
             source_file[f] = s
 
         for (n, _) in c_query("(function_definition) @fn_def").captures(tree.root_node):
-            name = n.child_by_field_name("declarator").child_by_field_name("declarator").text.decode()
-            function_nodes[name] = n
+            exclude = False
 
-    target_functions = ["xexpf", "xexpm1f"]
+            # Check if n is under the wrong side of a conditional definition
+            if n.parent.type in ["preproc_if", "preproc_ifdef"]:
+                condition = n.parent.named_children[0].text.decode()
+                if macro_conditionals.get(condition) == "0":
+                    exclude = True
+            if n.parent.type == "preproc_else":
+                condition = n.parent.parent.named_children[0].text.decode()
+                if macro_conditionals.get(condition) == "1":
+                    exclude = True
+
+            name = n.child_by_field_name("declarator").child_by_field_name("declarator").text.decode()
+            function_nodes[name].append((n, exclude))
+
+    
     # target_functions = ["xpowf"]
     fns_to_translate = []
     for t in target_functions:
@@ -105,12 +154,20 @@ def main():
     code = []
     decls = []
     for f in fns_to_translate:
-        file = source_file[f]
+        valid_nodes = [n for n, exclude in function_nodes[f] if not exclude]
+        if len(valid_nodes) == 0:
+            print(f"WARNING: found 0 valid definitions and {len(function_nodes[f])} invalid definitions for function {f} (using first invalid)", file=sys.stderr)
+            node = function_nodes[f][0][0]
+        else:
+            node = valid_nodes[0]
+        
+        if len(valid_nodes) > 1:
+            print(f"WARNING: found {len(valid_nodes)} valid definitions for function {f} (using first valid)", file=sys.stderr)
 
-        # Manually strip off some of the macros in the function definition
-        node = function_nodes[f]
+        file = source_file[f]
         line = node.start_point[0] + 1
         [(decl, _)] = c_query("(function_definition declarator: (function_declarator) @decl)").captures(node)
+        # Manually strip off some of the macros in the function definition
         start_pos = decl.start_byte - node.start_byte
         start_pos = node.text.rfind(b" ", 0, start_pos)
         start_pos = node.text.rfind(b" ", 0, start_pos)
@@ -192,7 +249,7 @@ def simd_op_translator(in_spec, out_spec):
         )
     return (in_fn_name, translate)
 
-def function_rename_translator(old_name, new_name):
+def function_rename_translator(old_name, new_name, is_top_level=False):
     old_name = old_name.encode()
     new_name = new_name.encode()
     def translate(node, ctx):
@@ -201,7 +258,11 @@ def function_rename_translator(old_name, new_name):
             assert node.child_by_field_name("function").text == old_name
             # Pass tag as first parameter, and mark that we need the tag
             ctx["tag_types"].add(b"df")
-            return new_name + b"(df, " + translate_tree(node.child_by_field_name("arguments"), ctx).lstrip(b"(")
+            ret = new_name + b"(df, " + translate_tree(node.child_by_field_name("arguments"), ctx).lstrip(b"(")
+            if is_top_level:
+                return b"sleef::" + ret
+            else:
+                return ret
         if node.type == "function_declarator":
             assert node.child_by_field_name("declarator").text == old_name
             # Add in tag as first parameter
@@ -257,6 +318,62 @@ def translate_constant(node, ctx):
     else:
         return None
 
+def macro_conditonal_translator(in_condition, out_condition):
+    in_condition = in_condition.encode()
+    out_condition = out_condition.encode()
+    def translate(node, ctx):
+        assert node.type in ["preproc_if", "preproc_ifdef"]
+        # Verify assumptions about the early nodes in the children
+        if node.type == "preproc_if":
+            assert node.children[0].text == b"#if"    
+            assert node.field_name_for_child(1) == "condition"
+            assert node.children[2].text == b"\n"
+            first_line_nodes = 3
+        else:
+            assert node.children[0].text == b"#ifdef"
+            assert node.field_name_for_child(1) == "name"
+            assert node.children[2].is_named
+            first_line_nodes = 2
+        
+
+        if out_condition == b"0":
+            alt = translate_tree(node.child_by_field_name("alternative"), ctx)
+            return alt[alt.find(b"\n")+1:]
+        
+        last_byte = node.start_byte
+        child_text = []
+        for c in node.children:
+            child_text.append(ctx["text"][last_byte:c.start_byte])
+            last_byte=c.end_byte
+            child_text.append(translate_tree(c, ctx))
+        child_text.append(ctx["text"][last_byte:node.end_byte])
+        
+        if out_condition == b"1":
+            [alt_index] = [i for i, _  in enumerate(node.children) if node.field_name_for_child(i) == "alternative"]
+            # child_text is [literal, child_0, literal, child_1, ... literal, child_n, literal]
+            child_text = child_text[(1 + 2*first_line_nodes):(1 + 2*alt_index)]
+            return b"".join(child_text)
+        else:
+            # Condition text should be position 3
+            child_text[3] = out_condition
+        return b"".join(child_text)
+
+    return (in_condition, translate)
+
+def translate_macro_conditional(node, ctx):
+    assert node.type in ["preproc_if", "preproc_ifdef"]
+    condition = node.named_children[0].text
+    if condition in macro_conditional_translations:
+        return macro_conditional_translations[condition](node, ctx)
+    else:
+        return None
+
+def translate_tag_name_conflict(node, ctx):
+    assert node.type == "identifier"
+    if node.text in [b"df", b"du", b"di"]:
+        return node.text + b"_"
+    return node.text
+
 def ancestors(node):
     while node.parent is not None:
         node = node.parent
@@ -272,6 +389,8 @@ def translate_function(node):
         "type_id": translate_type_id,
         "fn_decl": translate_fn_decl,
         "const_id": translate_constant,
+        "macro_conditional": translate_macro_conditional,
+        "tag_name_conflict": translate_tag_name_conflict,
     }
 
     captures = c_query(
@@ -279,8 +398,11 @@ def translate_function(node):
     (call_expression) @fn_call
     (type_identifier) @type_id
     (function_declarator) @fn_decl
-    (argument_list (identifier) @const_id)
-    (argument_list (unary_expression (identifier) @const_id))
+    (identifier) @const_id
+    (preproc_if) @macro_conditional
+    (preproc_ifdef) @macro_conditional
+    ((identifier) @tag_name_conflict
+        (#match? @tag_name_conflict "^d[iuf]$"))
     """
     ).captures(node)
     fn_body = node.child_by_field_name("body")
@@ -290,22 +412,29 @@ def translate_function(node):
     )
     declared_identifiers |= set(fn_call_translations.keys())
     
-    unknown_ids = []
+    unknown_ids = set()
     for n, _ in c_query("(identifier) @id").captures(fn_body):
         if n.text in declared_identifiers:
             continue
         if n.text in fn_call_translations:
             continue
         if n.text in constant_translations:
-            if n.parent.type == "argument_list":
-                continue
-            if n.parent.type == "unary_expression" and n.parent.parent.type == "argument_list":
-                continue
-        unknown_ids.append(n.text)
+            continue
+        
+        is_known_macro = False
+        for a in ancestors(n):
+            if a.type in ["preproc_if", "preproc_ifdef"]:
+                is_known_macro = a.named_children[0].text in macro_conditional_translations
+                break    
+        if is_known_macro:
+            continue
+
+        unknown_ids.add(n.text)
 
     
     if len(unknown_ids) > 0:
-        print("WARNING: Possibly unknown identifiers: ", b", ".join(unknown_ids), file=sys.stderr)
+        name = node.child_by_field_name("declarator").child_by_field_name("declarator").text.decode()
+        print(f"WARNING: Possibly unknown identifiers in {name}: ", b", ".join(unknown_ids).decode(), file=sys.stderr)
 
     ctx = {
         "text": root_node.text,
@@ -419,6 +548,7 @@ def translate_constant_defs(root_node):
     """
     (translation_unit (preproc_ifdef (preproc_if) @if))
     (translation_unit (preproc_ifdef (preproc_def) @define))
+    (translation_unit (preproc_ifdef (preproc_ifdef (preproc_def) @define)))
     """
     )
     translations = []
@@ -426,7 +556,6 @@ def translate_constant_defs(root_node):
         if tag == "define":
             translations.append(translate_tree(n, ctx).strip())
         if tag == "if":
-            # breakpoint()
             res = translate_tree(n, ctx)
             res = re.sub(b'\n[\n ]+', b'\n', res)
             translations.append(res)
@@ -471,6 +600,8 @@ FILE_TEMPLATE = textwrap.dedent(
 
 #include "hwy/highway.h"
 
+extern const float PayneHanekReductionTable_float[]; // Precomputed table of exponent values for Payne Hanek reduction
+
 HWY_BEFORE_NAMESPACE();
 namespace hwy {{
 namespace HWY_NAMESPACE {{
@@ -479,6 +610,149 @@ namespace sleef {{
 {decls}
 
 namespace {{
+
+
+// Estrin's Scheme is a faster method for evaluating large polynomials on
+// super scalar architectures. It works by factoring the Horner's Method
+// polynomial into power of two sub-trees that can be evaluated in parallel.
+// Wikipedia Link: https://en.wikipedia.org/wiki/Estrin%27s_scheme
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T c0, T c1) {{
+  return MulAdd(c1, x, c0);
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T c0, T c1, T c2) {{
+  return MulAdd(x2, c2, MulAdd(c1, x, c0));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T c0, T c1, T c2, T c3) {{
+  return MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T c0, T c1, T c2, T c3, T c4) {{
+  return MulAdd(x4, c4, MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T c0, T c1, T c2, T c3, T c4, T c5) {{
+  return MulAdd(x4, MulAdd(c5, x, c4),
+                MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6) {{
+  return MulAdd(x4, MulAdd(x2, c6, MulAdd(c5, x, c4)),
+                MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7) {{
+  return MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8) {{
+  return MulAdd(x8, c8,
+                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9) {{
+  return MulAdd(x8, MulAdd(c9, x, c8),
+                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9, T c10) {{
+  return MulAdd(x8, MulAdd(x2, c10, MulAdd(c9, x, c8)),
+                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9, T c10, T c11) {{
+  return MulAdd(x8, MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8)),
+                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9, T c10, T c11,
+                                     T c12) {{
+  return MulAdd(
+      x8, MulAdd(x4, c12, MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
+      MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+             MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9, T c10, T c11,
+                                     T c12, T c13) {{
+  return MulAdd(x8,
+                MulAdd(x4, MulAdd(c13, x, c12),
+                       MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
+                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9, T c10, T c11,
+                                     T c12, T c13, T c14) {{
+  return MulAdd(x8,
+                MulAdd(x4, MulAdd(x2, c14, MulAdd(c13, x, c12)),
+                       MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
+                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9, T c10, T c11,
+                                     T c12, T c13, T c14, T c15) {{
+  return MulAdd(x8,
+                MulAdd(x4, MulAdd(x2, MulAdd(c15, x, c14), MulAdd(c13, x, c12)),
+                       MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
+                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T x16, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9, T c10, T c11,
+                                     T c12, T c13, T c14, T c15, T c16) {{
+  return MulAdd(
+      x16, c16,
+      MulAdd(x8,
+             MulAdd(x4, MulAdd(x2, MulAdd(c15, x, c14), MulAdd(c13, x, c12)),
+                    MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
+             MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                    MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T x16, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9, T c10, T c11,
+                                     T c12, T c13, T c14, T c15, T c16, T c17) {{
+  return MulAdd(
+      x16, MulAdd(c17, x, c16),
+      MulAdd(x8,
+             MulAdd(x4, MulAdd(x2, MulAdd(c15, x, c14), MulAdd(c13, x, c12)),
+                    MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
+             MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                    MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)))));
+}}
+template <class T>
+HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T x16, T c0, T c1, T c2, T c3, T c4, T c5,
+                                     T c6, T c7, T c8, T c9, T c10, T c11,
+                                     T c12, T c13, T c14, T c15, T c16, T c17,
+                                     T c18) {{
+  return MulAdd(
+      x16, MulAdd(x2, c18, MulAdd(c17, x, c16)),
+      MulAdd(x8,
+             MulAdd(x4, MulAdd(x2, MulAdd(c15, x, c14), MulAdd(c13, x, c12)),
+                    MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
+             MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
+                    MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)))));
+}}
 
 //////////////////
 // Constants
@@ -498,6 +772,115 @@ namespace {{
 HWY_AFTER_NAMESPACE();
 
 #endif  // HIGHWAY_HWY_CONTRIB_MATH_MATH_INL_H_
+
+ __attribute__((aligned(64)))
+const float PayneHanekReductionTable_float[] = {{
+    // clang-format off
+  0.159154892, 5.112411827e-08, 3.626141271e-15, -2.036222915e-22,
+  0.03415493667, 6.420638243e-09, 7.342738037e-17, 8.135951656e-24,
+  0.03415493667, 6.420638243e-09, 7.342738037e-17, 8.135951656e-24,
+  0.002904943191, -9.861969574e-11, -9.839336547e-18, -1.790215892e-24,
+  0.002904943191, -9.861969574e-11, -9.839336547e-18, -1.790215892e-24,
+  0.002904943191, -9.861969574e-11, -9.839336547e-18, -1.790215892e-24,
+  0.002904943191, -9.861969574e-11, -9.839336547e-18, -1.790215892e-24,
+  0.0009518179577, 1.342109202e-10, 1.791623576e-17, 1.518506657e-24,
+  0.0009518179577, 1.342109202e-10, 1.791623576e-17, 1.518506657e-24,
+  0.0004635368241, 1.779561221e-11, 4.038449606e-18, -1.358546052e-25,
+  0.0002193961991, 1.779561221e-11, 4.038449606e-18, -1.358546052e-25,
+  9.73258866e-05, 1.779561221e-11, 4.038449606e-18, -1.358546052e-25,
+  3.62907449e-05, 3.243700447e-12, 5.690024473e-19, 7.09405479e-26,
+  5.773168596e-06, 1.424711477e-12, 1.3532163e-19, 1.92417627e-26,
+  5.773168596e-06, 1.424711477e-12, 1.3532163e-19, 1.92417627e-26,
+  5.773168596e-06, 1.424711477e-12, 1.3532163e-19, 1.92417627e-26,
+  1.958472239e-06, 5.152167755e-13, 1.3532163e-19, 1.92417627e-26,
+  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
+  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
+  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
+  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
+  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
+  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
+  2.132179588e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
+  6.420638243e-09, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
+  6.420638243e-09, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
+  2.695347945e-09, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
+  8.327027956e-10, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
+  8.327027956e-10, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
+  3.670415083e-10, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
+  1.342109202e-10, 1.791623576e-17, 1.518506361e-24, 2.613904e-31,
+  1.779561221e-11, 4.038449606e-18, -1.358545683e-25, -3.443243946e-32,
+  1.779561221e-11, 4.038449606e-18, -1.358545683e-25, -3.443243946e-32,
+  1.779561221e-11, 4.038449606e-18, -1.358545683e-25, -3.443243946e-32,
+  3.243700447e-12, 5.690024473e-19, 7.094053557e-26, 1.487136711e-32,
+  3.243700447e-12, 5.690024473e-19, 7.094053557e-26, 1.487136711e-32,
+  3.243700447e-12, 5.690024473e-19, 7.094053557e-26, 1.487136711e-32,
+  1.424711477e-12, 1.3532163e-19, 1.924175961e-26, 2.545416018e-33,
+  5.152167755e-13, 1.3532163e-19, 1.924175961e-26, 2.545416018e-33,
+  6.046956013e-14, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
+  6.046956013e-14, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
+  6.046956013e-14, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
+  3.626141271e-15, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
+  3.626141271e-15, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
+  3.626141271e-15, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
+  3.626141271e-15, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
+  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
+  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
+  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
+  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
+  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
+  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
+  1.791623576e-17, 1.518506361e-24, 2.61390353e-31, 4.764937743e-38,
+  1.791623576e-17, 1.518506361e-24, 2.61390353e-31, 4.764937743e-38,
+  4.038449606e-18, -1.358545683e-25, -3.443243946e-32, 6.296048013e-40,
+  4.038449606e-18, -1.358545683e-25, -3.443243946e-32, 6.296048013e-40,
+  5.690024473e-19, 7.094053557e-26, 1.487136711e-32, 6.296048013e-40,
+  5.690024473e-19, 7.094053557e-26, 1.487136711e-32, 6.296048013e-40,
+  5.690024473e-19, 7.094053557e-26, 1.487136711e-32, 6.296048013e-40,
+  1.3532163e-19, 1.924175961e-26, 2.545415467e-33, 6.296048013e-40,
+  1.3532163e-19, 1.924175961e-26, 2.545415467e-33, 6.296048013e-40,
+  2.690143217e-20, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
+  2.690143217e-20, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
+  2.690143217e-20, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
+  1.334890502e-20, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
+  6.572641438e-21, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
+  0.05874381959, 1.222115387e-08, 7.693612965e-16, 1.792054435e-22,
+  0.02749382704, 4.77057327e-09, 7.693612965e-16, 1.792054435e-22,
+  0.01186883077, 1.045283415e-09, 3.252721926e-16, 7.332633139e-23,
+  0.00405633077, 1.045283415e-09, 3.252721926e-16, 7.332633139e-23,
+  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
+  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
+  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
+  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
+  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
+  2.801149822e-05, 4.821800945e-12, 8.789757674e-19, 1.208447639e-25,
+  2.801149822e-05, 4.821800945e-12, 8.789757674e-19, 1.208447639e-25,
+  2.801149822e-05, 4.821800945e-12, 8.789757674e-19, 1.208447639e-25,
+  1.275271279e-05, 1.183823005e-12, 1.161414894e-20, 1.291319272e-27,
+  5.12331826e-06, 1.183823005e-12, 1.161414894e-20, 1.291319272e-27,
+  1.308621904e-06, 2.743283031e-13, 1.161414894e-20, 1.291319272e-27,
+  1.308621904e-06, 2.743283031e-13, 1.161414894e-20, 1.291319272e-27,
+  3.549478151e-07, 4.695462769e-14, 1.161414894e-20, 1.291319272e-27,
+  3.549478151e-07, 4.695462769e-14, 1.161414894e-20, 1.291319272e-27,
+  1.165292645e-07, 1.853292503e-14, 4.837885366e-21, 1.291319272e-27,
+  1.165292645e-07, 1.853292503e-14, 4.837885366e-21, 1.291319272e-27,
+  5.69246339e-08, 4.322073705e-15, 1.449754789e-21, 7.962890365e-29,
+  2.712231151e-08, 4.322073705e-15, 1.449754789e-21, 7.962890365e-29,
+  1.222115387e-08, 7.693612965e-16, 1.792054182e-22, 2.91418027e-29,
+  4.77057327e-09, 7.693612965e-16, 1.792054182e-22, 2.91418027e-29,
+  1.045283415e-09, 3.252721926e-16, 7.332632508e-23, 3.898253736e-30,
+  1.045283415e-09, 3.252721926e-16, 7.332632508e-23, 3.898253736e-30,
+  1.139611461e-10, 1.996093359e-17, 5.344349223e-25, 1.511644828e-31,
+  1.139611461e-10, 1.996093359e-17, 5.344349223e-25, 1.511644828e-31,
+  1.139611461e-10, 1.996093359e-17, 5.344349223e-25, 1.511644828e-31,
+  1.139611461e-10, 1.996093359e-17, 5.344349223e-25, 1.511644828e-31,
+  5.575349904e-11, 6.083145782e-18, 5.344349223e-25, 1.511644828e-31,
+  2.664967552e-11, -8.557475018e-19, -8.595036458e-26, -2.139883875e-32,
+  1.209775682e-11, 2.61369883e-18, 5.344349223e-25, 1.511644828e-31,
+  4.821800945e-12, 8.789757674e-19, 1.208447639e-25, 3.253064536e-33,
+  1.183823005e-12, 1.161414894e-20, 1.29131908e-27, 1.715766248e-34,
+  1.183823005e-12, 1.161414894e-20, 1.29131908e-27, 1.715766248e-34,
+  2.743283031e-13, 1.161414894e-20, 1.29131908e-27, 1.715766248e-34,
+    // clang-format on
+}};
 """)
 
 
