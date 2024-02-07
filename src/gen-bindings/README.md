@@ -11,7 +11,9 @@ Sources used by translation code:
 Files in `rename_data`:
 
 - `simd_ops.tsv` - This is the core translation logic, specifying how C snippets and parameters should be translated into one or more Hwy function calls
-  - Note that `df`, `du`, and `di` are special variable names denoting Hwy vector type tags of float, uint32_t, and int32_t respectively
+  - Note that `df`, `du`, `di` are special variable names denoting HWY vector type tags of floating-point, unsigned int, and signed int respectively. (Size-matched to float/double for current function)
+  - `di32` and `du32` are always 32-bit signed/unsiged integers respectively, but are currently not used in an attempt to
+    avoid SLEEF's use of mixed-width types for double-precision math
 - `function_renames.tsv` - This lists top-level or helper functions from SLEEF that should be translated fully into Hwy. For some small functions, it's a judgement call whether to put them as a function rename or as a SIMD op which will be translated inline
 - `types.tsv` - Translations from SLEEF types to Hwy types
 - `macro_conditionals.tsv` - Translations for macros used in SLEEF. Outputs of 0 or 1 will cause dead code branches to be eliminated in the translation

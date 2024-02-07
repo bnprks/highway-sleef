@@ -20,7 +20,7 @@ add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/tree-sitter-grammars.so"
     COMMAND ${Python3_EXECUTABLE} ARGS ${CMAKE_CURRENT_SOURCE_DIR}/treesitter_utils.py ${CMAKE_SOURCE_DIR}/tree-sitter "tree-sitter-grammars.so"
 )
 
-add_custom_target(hwy_sleef_generated
+add_custom_command(OUTPUT "sleef-generated.h"
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/translate.py"
         "${sleef_SOURCE_DIR}/src" 
         "${CMAKE_CURRENT_SOURCE_DIR}/rename_data"
@@ -30,8 +30,11 @@ add_custom_target(hwy_sleef_generated
     DEPENDS 
         "${CMAKE_CURRENT_SOURCE_DIR}/translate.py"
         "${CMAKE_CURRENT_BINARY_DIR}/tree-sitter-grammars.so" 
+        "${CMAKE_CURRENT_SOURCE_DIR}/rename_data/constant_renames.tsv"
         "${CMAKE_CURRENT_SOURCE_DIR}/rename_data/function_renames.tsv"
+        "${CMAKE_CURRENT_SOURCE_DIR}/rename_data/macro_conditionals.tsv"
         "${CMAKE_CURRENT_SOURCE_DIR}/rename_data/simd_ops.tsv"
         "${CMAKE_CURRENT_SOURCE_DIR}/rename_data/types.tsv"
-    BYPRODUCTS "sleef-generated.h"
 )
+
+add_custom_target(highway_sleef_generated DEPENDS "sleef-generated.h")

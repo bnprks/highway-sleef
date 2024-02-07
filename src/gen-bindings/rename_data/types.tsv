@@ -1,7 +1,14 @@
-vint2	Vec<RebindToSigned<D>>
-vmask	Vec<RebindToUnsigned<D>>
-vopmask	Mask<D>
-vfloat	Vec<D>
-vfloat2	Vec2<D>
-fi_t	Vec2<D>
-dfi_t	Vec3<D>
+# Sleef Name,     Hwy Name,   Precision Type
+vint2	Vec<RebindToSigned<D>>	unknown
+vint	Vec<RebindToSigned<D>>	unknown
+vmask	Vec<RebindToUnsigned<D>>	unknown
+vopmask	Mask<D>	unknown
+vfloat	Vec<D>	float
+vfloat2	Vec2<D>	float
+vdouble	Vec<D>	double
+vdouble2	Vec2<D>	double
+fi_t	Vec2<D>	float
+dfi_t	Vec3<D>	float
+
+# Used in NEON reciprocal sqrt for some reason
+float32x4_t	Vec<D>	float

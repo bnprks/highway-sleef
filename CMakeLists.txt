@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 project(sleef-highway)
+enable_testing()
 
 # Just build inline headers for sleef
 set(sleef_SOURCE_DIR ${CMAKE_SOURCE_DIR}/sleef)

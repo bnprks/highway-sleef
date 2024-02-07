@@ -1,14 +1,23 @@
 # Constants that sleef #defines, translated with comments.
 # Columns are: sleef_name, new_name, type, comment
 SLEEF_FLT_MIN	FloatMin	float	Minimum normal float value
-SLEEF_INFINITY	InfDouble	double	Double precision infinity
 SLEEF_INFINITYf	InfFloat	float	Floating point infinity
-SLEEF_NAN	NanDouble	double	Double precision NaN
 SLEEF_NANf	NanFloat	float	Floating point NaN
+SLEEF_DBL_MIN	DoubleMin	double	Minimum normal double value
+SLEEF_INFINITY	InfDouble	double	Double precision infinity
+SLEEF_NAN	NanDouble	double	Double precision NaN
 
-L2Lf	Ln2Lo	float	Ln2Hi + Ln2Lo ~= ln(2)
-L2Uf	Ln2Hi	float	Ln2Hi + Ln2Lo ~= ln(2)
-R_LN2f	OneOverLn2	float	1 / ln(2)
+L2L	Ln2Lo_d	double	Ln2Hi + Ln2Lo ~= ln(2)
+L2Lf	Ln2Lo_f	float	Ln2Hi + Ln2Lo ~= ln(2)
+L2U	Ln2Hi_d	double	Ln2Hi + Ln2Lo ~= ln(2)
+L2Uf	Ln2Hi_f	float	Ln2Hi + Ln2Lo ~= ln(2)
+R_LN2	OneOverLn2_d	double	1 / ln(2)
+R_LN2f	OneOverLn2_f	float	1 / ln(2)
+LOG10_2	Lg10	double	log2(10)
+L10Uf	Log10Of2_Hi_f	float	Log10Of2_Hi_f + Log10Of2_Lo_f ~= log10(2)
+L10Lf	Log10Of2_Lo_f	float	Log10Of2_Hi_f + Log10Of2_Lo_f ~= log10(2)
+L10U	Log10Of2_Hi_d	double	Log10Of2_Hi_d + Log10Of2_Lo_d ~= log10(2)
+L10L	Log10Of2_Lo_d	double	Log10Of2_Hi_d + Log10Of2_Lo_d ~= log10(2)
 
 TRIGRANGEMAXf	TrigRangeMax	float	Max value for using 4-part sum of Pi
 PI_Af	PiAf	float	Four-part sum of Pi (1/4)

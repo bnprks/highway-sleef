@@ -14,11 +14,15 @@ fn_call_translations = {}
 fn_decl_translations = {}
 fn_comments = {}
 type_translations = {}
+type_precisions = {}
 constant_translations = {}
 constant_types = {}
 constant_comments = {}
 macro_conditionals = {}
 macro_conditional_translations = {}
+
+source_file = {}
+BUILTIN_TAG_NAMES = [b"df", b"di32", b"di", b"du32", b"du"]
 
 def main():
     parser = argparse.ArgumentParser(
@@ -38,12 +42,23 @@ def main():
     set_treesitter_lib(args.treesitter_lib)
 
     target_functions = [
+        # Single-precision ops
         "xexpf",
+        "xexp2f",
+        "xexp10f",
         "xexpm1f",
         "xlogf_u1",
         "xlogf",
-        "xlog1pf",
+        "xlog10f",
         "xlog2f",
+        "xlog1pf",
+        "xsqrtf_u05",
+        "xsqrtf_u35",
+        "xcbrtf",
+        "xcbrtf_u1",
+        "xhypotf_u05",
+        "xhypotf_u35",
+        "xpowf",
         "xsinf_u1",
         "xcosf_u1",
         "xtanf_u1",
@@ -65,6 +80,23 @@ def main():
         "xacoshf",
         "xatanf_u1",
         "xatanhf",
+        # Double-precision ops
+        "xexp",
+        "xexp2",
+        "xexp10",
+        "xexpm1",
+        "xlog_u1",
+        "xlog",
+        "xlog10",
+        "xlog2",
+        "xlog1p",
+        "xsqrt_u05",
+        "xsqrt_u35",
+        "xcbrt",
+        "xcbrt_u1",
+        "xhypot_u05",
+        "xhypot_u35",
+        "xpow",
     ]
 
     # Read data files to register translations for simd ops, intermediate functions, and types
@@ -78,9 +110,10 @@ def main():
         key, translate_fn = simd_op_translator(in_spec, out_spec)
         fn_call_translations[key] = translate_fn
     
-    for in_type, out_type in parse_tsv(rename_data / "types.tsv", 2):
+    for in_type, out_type, precision in parse_tsv(rename_data / "types.tsv", 3):
         key, translate_fn = type_rename_translator(in_type, out_type)
         type_translations[key] = translate_fn
+        type_precisions[key] = precision
 
     for old_name, new_name, type, comment in parse_tsv(rename_data / "constant_renames.tsv", 4):
         key, translate_fn = constant_rename_translator(old_name, new_name)
@@ -93,14 +126,15 @@ def main():
         key, translate_fn = macro_conditonal_translator(in_condition, out_condition)
         macro_conditional_translations[key] = translate_fn
 
-    text = b"\n".join([
-        open(sleef_src / "libm/sleefsimdsp.c", "rb").read(),
-        open(sleef_src / "common/df.h", "rb").read(),
-    ])
-
-    sources = ["libm/sleefsimdsp.c", "common/df.h"]
+    sources = [
+        "libm/sleefsimdsp.c", 
+        "libm/sleefsimddp.c", 
+        "common/df.h", 
+        "common/dd.h",
+        "common/commonfuncs.h",
+        "arch/helperneon32.h",
+    ]
     calls = {}
-    source_file = {}
     trees = {}
 
     function_nodes = collections.defaultdict(list) # name: [(node, exclude_bool)]
@@ -118,7 +152,7 @@ def main():
             exclude = False
 
             # Check if n is under the wrong side of a conditional definition
-            if n.parent.type in ["preproc_if", "preproc_ifdef"]:
+            if n.parent.type in ["preproc_if", "preproc_ifdef", "preproc_elif"]:
                 condition = n.parent.named_children[0].text.decode()
                 if macro_conditionals.get(condition) == "0":
                     exclude = True
@@ -130,8 +164,6 @@ def main():
             name = n.child_by_field_name("declarator").child_by_field_name("declarator").text.decode()
             function_nodes[name].append((n, exclude))
 
-    
-    # target_functions = ["xpowf"]
     fns_to_translate = []
     for t in target_functions:
         for f in topo_sort(t, calls):
@@ -143,17 +175,12 @@ def main():
                 fns_to_translate.append(f)
     fns_to_translate += target_functions
 
-    output_template = textwrap.dedent("""
-    // {comment}
-    // Translated from {file}:{line} {old_function_name}
-    template<class D>
-    HWY_INLINE {translated_function}
-    """).strip()
-
     helper_code = []
     code = []
     decls = []
     for f in fns_to_translate:
+        if f == "xsqrtf_u35":
+            pass #breakpoint()
         valid_nodes = [n for n, exclude in function_nodes[f] if not exclude]
         if len(valid_nodes) == 0:
             if len(function_nodes[f]) > 1:
@@ -162,24 +189,28 @@ def main():
         else:
             node = valid_nodes[0]
         
-        if len(valid_nodes) > 1:
-            print(f"WARNING: found {len(valid_nodes)} valid definitions for function {f} (using first valid)", file=sys.stderr)
+        # Special-case for two function definitions withn a known #if ... #else ... #endif structure,
+        # possibly with an intervening #elif that doesn't get used
+        if len(valid_nodes) == 2 and \
+            (valid_nodes[0].parent == valid_nodes[1].parent.parent or 
+             valid_nodes[0].parent == valid_nodes[1].parent.parent.parent) and \
+            valid_nodes[0].parent.named_children[0].text.decode() in macro_conditionals:
+            translation_true = translate_sleef_function(f, valid_nodes[0])
+            translation_false = translate_sleef_function(f, valid_nodes[1])
+            body_true = translation_true[translation_true.find("{")+2:translation_true.rfind("}")]
+            body_false = translation_false[translation_false.find("{")+2:translation_false.rfind("}")]
+            translated_condition = macro_conditionals[valid_nodes[0].parent.named_children[0].text.decode()]
+            maybe_newline = "" if body_false[-1] == "\n" else "\n"
+            translation = translation_true.replace(
+                body_true, 
+                f"#if {translated_condition}\n{body_true}#else\n{body_false}{maybe_newline}#endif\n"
+            )
+        else:
+            if len(valid_nodes) > 1:
+                print(f"WARNING: found {len(valid_nodes)} valid definitions for function {f} (using first valid)", file=sys.stderr)
+            translation = translate_sleef_function(f, node)
 
-        file = source_file[f]
-        line = node.start_point[0] + 1
-        [(decl, _)] = c_query("(function_definition declarator: (function_declarator) @decl)").captures(node)
-        # Manually strip off some of the macros in the function definition
-        start_pos = decl.start_byte - node.start_byte
-        start_pos = node.text.rfind(b" ", 0, start_pos)
-        start_pos = node.text.rfind(b" ", 0, start_pos)
-        node = c_parse(node.text[start_pos+1:]).root_node.children[0]
-        translation = output_template.format(
-            comment = fn_comments[f],
-            file = file,
-            line = line,
-            old_function_name = f,
-            translated_function = translate_function(node).decode()
-        )
+
         if f in target_functions:
             code.append(translation)
             decls.append(translation[:translation.find("{")].strip() + ";")
@@ -195,6 +226,30 @@ def main():
         helper_code="\n\n".join(helper_code),
         code="\n\n".join(code),
     ), file=out)
+
+def translate_sleef_function(function_name, node):
+    output_template = textwrap.dedent("""
+    // {comment}
+    // Translated from {file}:{line} {old_function_name}
+    template<class D>
+    HWY_INLINE {translated_function}
+    """).strip()
+
+    file = source_file[function_name]
+    line = node.start_point[0] + 1
+    [(decl, _)] = c_query("(function_definition declarator: (function_declarator) @decl)").captures(node)
+    # Manually strip off some of the macros in the function definition
+    start_pos = decl.start_byte - node.start_byte
+    start_pos = node.text.rfind(b" ", 0, start_pos)
+    start_pos = node.text.rfind(b" ", 0, start_pos)
+    node = c_parse(node.text[start_pos+1:]).root_node.children[0]
+    return output_template.format(
+        comment = fn_comments[function_name],
+        file = file,
+        line = line,
+        old_function_name = function_name,
+        translated_function = translate_function(node).decode()
+    )
 
 def parse_tsv(path, count):
     for l in open(path):
@@ -219,9 +274,8 @@ def simd_op_translator(in_spec, out_spec):
     (in_fn_name,) = [n.text for (n, _) in c_fn_name.captures(in_spec)]
 
     cpp_args = cpp_query("""
-    (template_function 
-        arguments: (template_argument_list (type_descriptor (type_identifier) @arg)))
-    (call_expression arguments: (argument_list (identifier) @arg))
+    (type_identifier) @arg
+    (identifier) @arg
     """)
 
     tag_types = set()
@@ -234,7 +288,7 @@ def simd_op_translator(in_spec, out_spec):
                 summary.append(in_args.index(n.text))
             else:
                 summary.append(n.text)
-                if len(n.text) == 2 and n.text[0] == ord('d'):
+                if n.text in BUILTIN_TAG_NAMES:
                     tag_types.add(n.text)
         last_offset = n.end_byte
     summary.append(out_spec.text[last_offset:])
@@ -338,7 +392,10 @@ def macro_conditonal_translator(in_condition, out_condition):
         
 
         if out_condition == b"0":
-            alt = translate_tree(node.child_by_field_name("alternative"), ctx)
+            alt = node.child_by_field_name("alternative")
+            if alt is None:
+                return b""
+            alt = translate_tree(alt, ctx)
             return alt[alt.find(b"\n")+1:]
         
         last_byte = node.start_byte
@@ -371,7 +428,7 @@ def translate_macro_conditional(node, ctx):
 
 def translate_tag_name_conflict(node, ctx):
     assert node.type == "identifier"
-    if node.text in [b"df", b"du", b"di"]:
+    if node.text in BUILTIN_TAG_NAMES:
         return node.text + b"_"
     return node.text
 
@@ -403,7 +460,7 @@ def translate_function(node):
     (preproc_if) @macro_conditional
     (preproc_ifdef) @macro_conditional
     ((identifier) @tag_name_conflict
-        (#match? @tag_name_conflict "^d[iuf]$"))
+        (#match? @tag_name_conflict "^d[iu](32)?$"))
     """
     ).captures(node)
     fn_body = node.child_by_field_name("body")
@@ -421,12 +478,16 @@ def translate_function(node):
             continue
         if n.text in constant_translations:
             continue
+        if n.text.decode() in macro_conditionals:
+            continue
         
         is_known_macro = False
+        prev_a = n
         for a in ancestors(n):
             if a.type in ["preproc_if", "preproc_ifdef"]:
-                is_known_macro = a.named_children[0].text in macro_conditional_translations
+                is_known_macro = a.named_children[0].text in macro_conditional_translations and prev_a == a.named_children[0]
                 break    
+            prev_a = a
         if is_known_macro:
             continue
 
@@ -444,7 +505,22 @@ def translate_function(node):
         "tag_types": set(),
     }
 
-    return_type = translate_tree(node.child_by_field_name("type"), ctx)
+    # Determine if function should be restricted to floats or doubles:
+    # 1. If return type is float/double, use that
+    # 2. If return type is ambiguous, use type of first float/double argument
+    return_type = translate_tree(node.child_by_field_name("type"), ctx).decode()
+    type_nodes = [node.child_by_field_name("type")] + \
+        [n for n, _ in c_query("(parameter_declaration (type_identifier) @type)").captures(node.child_by_field_name("declarator"))]
+    for n in type_nodes:
+        if "float" == type_precisions[n.text]:
+            return_type = f"HWY_SLEEF_IF_FLOAT(D, {return_type})".encode()
+            break
+        elif "double" == type_precisions[n.text]:
+            return_type = f"HWY_SLEEF_IF_DOUBLE(D, {return_type})".encode()
+            break
+    if not return_type.startswith(b"HWY_SLEEF_IF"):
+        print(f"WARNING: Could not determine return type precision for function: {node.child_by_field_name('declarator').text.decode()}")
+
     signature = translate_tree(node.child_by_field_name("declarator"), ctx)
     body = translate_tree(node.child_by_field_name("body"), ctx)
     
@@ -454,8 +530,12 @@ def translate_function(node):
             continue # Coming in via parameters
         elif tag == b"di":
             tag_defs.append(b"  RebindToSigned<D> di;")
+        elif tag == b"di32":
+            tag_defs.append(b"  RebindToSigned32<D> di32;")
         elif tag == b"du":
             tag_defs.append(b"  RebindToUnsigned<D> du;")
+        elif tag == b"du32":
+            tag_defs.append(b"  RebindToUnsigned32<D> du32;")
         else:
             assert False
     tag_defs = b"\n".join(tag_defs)
@@ -492,8 +572,11 @@ def translate_preproc_define(node, ctx):
     value = node.child_by_field_name("value")
     # breakpoint()
     if name.text in constant_translations:
+        value = translate_tree(value, ctx)
+        if b"//" in value:
+            value = value[:value.find(b"//")]
         return (
-            b" ".join([b"constexpr", constant_types[name.text], translate_tree(name, ctx), b"=", translate_tree(value, ctx) + b";"]) +
+            b" ".join([b"constexpr", constant_types[name.text], translate_tree(name, ctx), b"=", value + b";"]) +
             b" // " + constant_comments[name.text] + b"\n" 
         )
     else:
@@ -502,8 +585,6 @@ def translate_preproc_define(node, ctx):
 def translate_preproc_if(node, ctx):
     assert node.type == "preproc_if"
     children = [n for n in node.children if n.type=="preproc_def"]
-    # breakpoint()
-
     # Note: we ignore the "alternative" branch in #if #else, since if 
     # nothing is defined under the true case, we can probably ignore the false case
 
@@ -599,6 +680,7 @@ FILE_TEMPLATE = textwrap.dedent(
 #define HIGHWAY_HWY_CONTRIB_SLEEF_SLEEF_INL_
 #endif
 
+#include <type_traits>
 #include "hwy/highway.h"
 
 extern const float PayneHanekReductionTable_float[]; // Precomputed table of exponent values for Payne Hanek reduction
@@ -606,12 +688,99 @@ extern const float PayneHanekReductionTable_float[]; // Precomputed table of exp
 HWY_BEFORE_NAMESPACE();
 namespace hwy {{
 namespace HWY_NAMESPACE {{
+
+#if HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3
+HWY_API Vec512<float> GetExponent(Vec512<float> x) {{
+  return Vec512<float>{{_mm512_getexp_ps(x.raw)}};
+}}
+HWY_API Vec256<float> GetExponent(Vec256<float> x) {{
+  return Vec256<float>{{_mm256_getexp_ps(x.raw)}};
+}}
+template<size_t N>
+HWY_API Vec128<float, N> GetExponent(Vec128<float, N> x) {{
+  return Vec128<float, N>{{_mm_getexp_ps(x.raw)}};
+}}
+
+HWY_API Vec512<double> GetExponent(Vec512<double> x) {{
+  return Vec512<double>{{_mm512_getexp_pd(x.raw)}};
+}}
+HWY_API Vec256<double> GetExponent(Vec256<double> x) {{
+  return Vec256<double>{{_mm256_getexp_pd(x.raw)}};
+}}
+template<size_t N>
+HWY_API Vec128<double, N> GetExponent(Vec128<double, N> x) {{
+  return Vec128<double, N>{{_mm_getexp_pd(x.raw)}};
+}}
+
+HWY_API Vec512<float> GetMantissa(Vec512<float> x) {{
+  return Vec512<float>{{_mm512_getmant_ps(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
+}}
+HWY_API Vec256<float> GetMantissa(Vec256<float> x) {{
+  return Vec256<float>{{_mm256_getmant_ps(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
+}}
+template<size_t N>
+HWY_API Vec128<float, N> GetMantissa(Vec128<float, N> x) {{
+  return Vec128<float, N>{{_mm_getmant_ps(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
+}}
+
+HWY_API Vec512<double> GetMantissa(Vec512<double> x) {{
+  return Vec512<double>{{_mm512_getmant_pd(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
+}}
+HWY_API Vec256<double> GetMantissa(Vec256<double> x) {{
+  return Vec256<double>{{_mm256_getmant_pd(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
+}}
+template<size_t N>
+HWY_API Vec128<double, N> GetMantissa(Vec128<double, N> x) {{
+  return Vec128<double, N>{{_mm_getmant_pd(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
+}}
+
+template<int I>
+HWY_API Vec512<float> Fixup(Vec512<float> a, Vec512<float> b, Vec512<int> c) {{
+    return Vec512<float>{{_mm512_fixupimm_ps(a.raw, b.raw, c.raw, I)}};
+}}
+template<int I>
+HWY_API Vec256<float> Fixup(Vec256<float> a, Vec256<float> b, Vec256<int> c) {{
+    return Vec256<float>{{_mm256_fixupimm_ps(a.raw, b.raw, c.raw, I)}};
+}}
+template<int I, size_t N>
+HWY_API Vec128<float, N> Fixup(Vec128<float, N> a, Vec128<float, N> b, Vec128<int, N> c) {{
+    return Vec128<float, N>{{_mm_fixupimm_ps(a.raw, b.raw, c.raw, I)}};
+}}
+
+template<int I>
+HWY_API Vec512<double> Fixup(Vec512<double> a, Vec512<double> b, Vec512<int64_t> c) {{
+    return Vec512<double>{{_mm512_fixupimm_pd(a.raw, b.raw, c.raw, I)}};
+}}
+template<int I>
+HWY_API Vec256<double> Fixup(Vec256<double> a, Vec256<double> b, Vec256<int64_t> c) {{
+    return Vec256<double>{{_mm256_fixupimm_pd(a.raw, b.raw, c.raw, I)}};
+}}
+template<int I, size_t N>
+HWY_API Vec128<double, N> Fixup(Vec128<double, N> a, Vec128<double, N> b, Vec128<int64_t, N> c) {{
+    return Vec128<double, N>{{_mm_fixupimm_pd(a.raw, b.raw, c.raw, I)}};
+}}
+#endif
+
 namespace sleef {{
+
+#undef HWY_SLEEF_HAS_FMA
+#if (HWY_ARCH_X86 && HWY_TARGET < HWY_SSE4) || HWY_ARCH_ARM || HWY_ARCH_S390X || HWY_ARCH_RVV 
+#define HWY_SLEEF_HAS_FMA 1
+#endif
+
+#undef HWY_SLEEF_IF_DOUBLE
+#define HWY_SLEEF_IF_DOUBLE(D, V) typename std::enable_if<std::is_same<double, TFromD<D>>::value, V>::type
+#undef HWY_SLEEF_IF_FLOAT
+#define HWY_SLEEF_IF_FLOAT(D, V) typename std::enable_if<std::is_same<float, TFromD<D>>::value, V>::type
 
 {decls}
 
 namespace {{
 
+template<class D>
+using RebindToSigned32 = Rebind<int32_t, D>;
+template<class D>
+using RebindToUnsigned32 = Rebind<uint32_t, D>;
 
 // Estrin's Scheme is a faster method for evaluating large polynomials on
 // super scalar architectures. It works by factoring the Horner's Method
@@ -772,8 +941,9 @@ HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T x16, T c0, T c1, T
 }}  // namespace hwy
 HWY_AFTER_NAMESPACE();
 
-#endif  // HIGHWAY_HWY_CONTRIB_MATH_MATH_INL_H_
+#endif  // HIGHWAY_HWY_CONTRIB_SLEEF_SLEEF_INL_
 
+#if HWY_ONCE
  __attribute__((aligned(64)))
 const float PayneHanekReductionTable_float[] = {{
     // clang-format off
@@ -882,6 +1052,7 @@ const float PayneHanekReductionTable_float[] = {{
   2.743283031e-13, 1.161414894e-20, 1.29131908e-27, 1.715766248e-34,
     // clang-format on
 }};
+#endif // HWY_ONCE
 """)
 
 

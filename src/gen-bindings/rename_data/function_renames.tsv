@@ -5,15 +5,42 @@
 
 # Single-argument exponential
 xexpf	Exp	Computes e^x
+xexp2f	Exp2	Computes 2^x
+xexp10f	Exp10	Computes 10^x
 xexpm1f	Expm1	Computes e^x - 1
 xlogf_u1	Log	Computes ln(x) with 1.0 ULP accuracy
 xlogf	LogFast	Computes ln(x) with 3.5 ULP accuracy
-xlog1pf	Log1p	Computes log1p(x) with 1.0 ULP accuracy
 xlog2f	Log2	Computes log2(x) with 1.0 ULP accuracy
+xlog10f	Log10	Computes log10(x) with 1.0 ULP accuracy
+xlog1pf	Log1p	Computes log1p(x) with 1.0 ULP accuracy
+xpowf	Pow	Computes x^y with 1.0 ULP accuracy
 
+xexp	Exp	Computes e^x
+xexp2	Exp2	Computes 2^x
+xexp10	Exp10	Computes 10^x
+xexpm1	Expm1	Computes e^x - 1
+xlog_u1	Log	Computes ln(x) with 1.0 ULP accuracy
+xlog	LogFast	Computes ln(x) with 3.5 ULP accuracy
+xlog2	Log2	Computes log2(x) with 1.0 ULP accuracy
+xlog10	Log10	Computes log10(x) with 1.0 ULP accuracy
+xlog1p	Log1p	Computes log1p(x) with 1.0 ULP accuracy
+xpow	Pow	Computes x^y with 1.0 ULP accuracy
+
+xsqrtf_u05	Sqrt	Computes sqrt(x) with 0.5 ULP accuracy
+xsqrtf_u35	SqrtFast	Computes sqrt(x) with 3.5 ULP accuracy
+xcbrtf_u1	Cbrt	Computes cube root of x with 1.0 ULP accuracy
+xcbrtf	CbrtFast	Computes cube root of x with 3.5 ULP accuracy
+xhypotf_u05	Hypot	Computes sqrt(x^2 + y^2) with 0.5 ULP accuracy
+xhypotf_u35	HypotFast	Computes sqrt(x^2 + y^2) with 3.5 ULP accuracy
+
+xsqrt_u05	Sqrt	Computes sqrt(x) with 0.5 ULP accuracy
+xsqrt_u35	SqrtFast	Computes sqrt(x) with 3.5 ULP accuracy
+xcbrt_u1	Cbrt	Computes cube root of x with 1.0 ULP accuracy
+xcbrt	CbrtFast	Computes cube root of x with 3.5 ULP accuracy
+xhypot_u05	Hypot	Computes sqrt(x^2 + y^2) with 0.5 ULP accuracy
+xhypot_u35	HypotFast	Computes sqrt(x^2 + y^2) with 3.5 ULP accuracy
 
 expm1fk	Expm1Fast	Computes e^x - 1 faster with lower precision
-xpowf	Pow	Computes x^y
 
 # Single-argument Trig
 xsinf_u1	Sin	Computes sin(x) with 1.0 ULP accuracy
@@ -50,15 +77,48 @@ vldexp3_vf_vf_vi2	LoadExp3	Sets the exponent of 'x' to 2^e. Very fast, "no denor
 vilogbk_vi2_vf	ILogB	Integer log of x
 vilogb2k_vi2_vf	ILogB2	Integer log of x, "but the argument must be a normalized value"
 vpow2i_vf_vi2	Pow2I	Computes 2^x, where x is an integer.
-vadd_vf_3vf	Add3	Add (x + y) + z
-vadd_vf_4vf	Add4	Add ((x + y) + z) + w
+vldexp_vd_vd_vi	LoadExp	Sets the exponent of 'x' to 2^e
+vldexp2_vd_vd_vi	LoadExp2	Sets the exponent of 'x' to 2^e. Fast, but "short reach"
+vldexp3_vd_vd_vi	LoadExp3	Sets the exponent of 'x' to 2^e. Very fast, "no denormal"
+vilogbk_vi_vd	ILogB	Integer log of x
+vilogb2k_vi_vd	ILogB2	Integer log of x, "but the argument must be a normalized value"
+vpow2i_vd_vi	Pow2I	Computes 2^x, where x is an integer.
+
+vadd_vf_3vf	Add3	Add (v0 + 1) + v2
+vadd_vf_4vf	Add4	Add ((v0 + 1) + v2) + v3
+vadd_vf_5vf	Add5	Add (((v0 + 1) + v2) + v3) + v4
+vadd_vf_6vf	Add6	Add ((((v0 + 1) + v2) + v3) + v4) + v5
+vadd_vf_7vf	Add7	Add (((((v0 + 1) + v2) + v3) + v4) + v5) + v6
+vadd_vf_8vf	Add8	Add ((((((v0 + 1) + v2) + v3) + v4) + v5) + v6) + v7
+vadd_vd_3vd	Add3	Add (v0 + 1) + v2
+vadd_vd_4vd	Add4	Add ((v0 + 1) + v2) + v3
+vadd_vd_5vd	Add5	Add (((v0 + 1) + v2) + v3) + v4
+vadd_vd_6vd	Add6	Add ((((v0 + 1) + v2) + v3) + v4) + v5
+vadd_vd_7vd	Add7	Add (((((v0 + 1) + v2) + v3) + v4) + v5) + v6
+vadd_vd_8vd	Add8	Add ((((((v0 + 1) + v2) + v3) + v4) + v5) + v6) + v7
+vsub_vd_3vd	Sub3	Sub (v0 - 1) - v2
+vsub_vd_4vd	Sub4	Sub ((v0 - 1) - v2) - v3
+vsub_vd_5vd	Sub5	Sub (((v0 - 1) - v2) - v3) - v4
+
+
 vsignbit_vo_vf	SignBitMask	Create a mask of which is true if x's sign bit is set
 vsignbit_vm_vf	SignBit	Extract the sign bit of x into an unsigned integer
 vsel_vi2_vf_vi2	SignBitOrZero	Zero out x when the sign bit of d is not set
 vorsign_vf_vf_vf	OrSignBit	Bitwise or of x with sign bit of y
 vmulsign_vf_vf_vf	MulSignBit	Calculate x * sign(y) with only bitwise logic
+vsignbit_vo_vd	SignBitMask	Create a mask of which is true if x's sign bit is set
+vsignbit_vm_vd	SignBit	Extract the sign bit of x into an unsigned integer
+vsel_vi2_vd_vi	SignBitOrZero	Zero out x when the sign bit of d is not set
+vorsign_vd_vd_vd	OrSignBit	Bitwise or of x with sign bit of y
+vmulsign_vd_vd_vd	MulSignBit	Calculate x * sign(y) with only bitwise logic
+
 rempif	PayneHanekReduction	Calculate Payne Hanek reduction. This appears to return ((2*x/pi) - round(2*x/pi)) * pi / 2 and the integer quadrant of x in range -2 to 2 (0 is [-pi/4, pi/4], 2/-2 are from [3pi/4, 5pi/4] with the sign flip a little after pi).
 rempisubf	PayneHanekReductionHelper	Helper for Payne Hanek reduction.
+
+visint_vo_vd	IsInt	True if d is an integer
+visodd_vo_vd	IsOdd	True if d is an odd (assuming d is an integer)
+vrecsqrt_vf_vf	ReciprocalSqrt	Calculate reciprocal square root on ARM NEON platforms
+
 
 ############
 # Double double arithmetic
@@ -68,29 +128,65 @@ expk2f	ExpDF	Computes e^x in double-float precision
 expkf	ExpDF_float	Computes e^x in double-float precision
 logkf	LogDF	Computes ln(x) in double-float precision (version 1)
 logk2f	LogFastDF	Computes ln(x) in double-float precision (version 2)
+expk2	ExpDD	Computes e^x in double-double precision
+expk	ExpDD_double	Computes e^x in double-double precision
+logk	LogDD	Computes ln(x) in double-double precision (version 1)
+logk2	LogFastDD	Computes ln(x) in double-double precision (version 2)
+
 dfadd2_vf2_vf2_vf2	AddDF	Computes x + y in double-float precision
 dfadd2_vf2_vf2_vf	AddDF	Computes x + y in double-float precision
 dfadd2_vf2_vf_vf2	AddDF	Computes x + y in double-float precision
 dfadd2_vf2_vf_vf	AddDF	Computes x + y in double-float precision
+ddadd2_vd2_vd2_vd2	AddDD	Computes x + y in double-double precision
+ddadd2_vd2_vd2_vd	AddDD	Computes x + y in double-double precision
+ddadd2_vd2_vd_vd2	AddDD	Computes x + y in double-double precision
+ddadd2_vd2_vd_vd	AddDD	Computes x + y in double-double precision
+
 dfadd_vf2_vf2_vf2	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
 dfadd_vf2_vf_vf2	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
 dfadd_vf2_vf2_vf	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
 dfadd_vf2_vf_vf	AddFastDF	Computes x + y in double-float precision, sped up by assuming |x| > |y|
+ddadd_vd2_vd2_vd2	AddFastDD	Computes x + y in double-double precision, sped up by assuming |x| > |y|
+ddadd_vd2_vd_vd2	AddFastDD	Computes x + y in double-double precision, sped up by assuming |x| > |y|
+ddadd_vd2_vd2_vd	AddFastDD	Computes x + y in double-double precision, sped up by assuming |x| > |y|
+ddadd_vd2_vd_vd	AddFastDD	Computes x + y in double-double precision, sped up by assuming |x| > |y|
+
 dfsub_vf2_vf2_vf2	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
 dfsub_vf2_vf2_vf	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
+
 dfrec_vf2_vf2	RecDF	Computes 1/x in double-float precision
 dfrec_vf2_vf	RecDF	Computes 1/x in double-float precision
+ddrec_vd2_vd2	RecDD	Computes 1/x in double-double precision
+ddrec_vd2_vd	RecDD	Computes 1/x in double-double precision
+
 dfneg_vf2_vf2	NegDF	Computes -x in double-float precision
+
 dfscale_vf2_vf2_vf	ScaleDF	Computes x * y in double-float precision
 dfmul_vf2_vf2_vf	MulDF	Computes x * y in double-float precision
 dfmul_vf2_vf2_vf2	MulDF	Computes x * y in double-float precision
 dfmul_vf2_vf_vf	MulDF	Computes x * y in double-float precision
 dfmul_vf_vf2_vf2	MulDF_float	Computes x * y in double-float precision, returning result as single-precision
+ddscale_vd2_vd2_vd	ScaleDD	Computes x * y in double-double precision
+ddmul_vd2_vd2_vd	MulDD	Computes x * y in double-double precision
+ddmul_vd2_vd2_vd2	MulDD	Computes x * y in double-double precision
+ddmul_vd2_vd_vd	MulDD	Computes x * y in double-double precision
+ddmul_vd_vd2_vd2	MulDD_double	Computes x * y in double-double precision, returning result as single-precision
+
 dfdiv_vf2_vf2_vf2	DivDF	Computes x / y in double-float precision
+dddiv_vd2_vd2_vd2	DivDD	Computes x / y in double-double precision
+
 dfsqu_vf2_vf2	SquareDF	Computes x^2 in double-float precision
 dfsqrt_vf2_vf	SqrtDF	Computes sqrt(x) in double-float precision
 dfsqrt_vf2_vf2	SqrtDF	Computes sqrt(x) in double-float precision
+ddsqu_vd2_vd2	SquareDD	Computes x^2 in double-double precision
+ddsqrt_vd2_vd	SqrtDD	Computes sqrt(x) in double-double precision
+ddsqrt_vd2_vd2	SqrtDD	Computes sqrt(x) in double-double precision
+
 vsel_vf2_vo_vf2_vf2	IfThenElse	Specialization of IfThenElse to double-float operands
-vupper_vf_vf	LowerPrecision	Set the bottom 12 significand bits of a floating point number to 0 (used in some double-float math)
+vupper_vf_vf	LowerPrecision	Set the bottom half of mantissa bits to 0 (used in some double-float math)
 dfnormalize_vf2_vf2	NormalizeDF	Normalizes a double-float precision representation (redistributes hi vs. lo value)
 atan2kf_u1	ATan2DF	atan2(x, y) in double-float precision
+vsel_vd2_vo_vd2_vd2	IfThenElse	Specialization of IfThenElse to double-double operands
+vupper_vd_vd	LowerPrecision	Set the bottom half of mantissa bits to 0 (used in some double-double math)
+ddnormalize_vd2_vd2	NormalizeDD	Normalizes a double-double precision representation (redistributes hi vs. lo value)
+atan2k_u1	ATan2DD	atan2(x, y) in double-double precision
