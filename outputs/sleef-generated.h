@@ -585,6 +585,21 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) LoadExp2(const D df, Vec<D> d, Vec<Rebi
   return Mul(Mul(d, Pow2I(df, ShiftRight<1>(e))), Pow2I(df, Sub(e, ShiftRight<1>(e))));
 }
 
+// Add (v0 + 1) + v2
+// Translated from common/df.h:59 vadd_vf_3vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Add3(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2) {
+  return Add(Add(v0, v1), v2);
+}
+
+// Computes x + y in double-float precision, sped up by assuming |x| > |y|
+// Translated from common/df.h:146 dfadd_vf2_vf_vf2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddFastDF(const D df, Vec<D> x, Vec2<D> y) {
+  Vec<D> s = Add(x, Get2<0>(y));
+  return Create2(df, s, Add3(df, Sub(x, s), Get2<0>(y), Get2<1>(y)));
+}
+
 // Set the bottom half of mantissa bits to 0 (used in some double-float math)
 // Translated from common/df.h:22 vupper_vf_vf
 template<class D>
@@ -616,27 +631,20 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) MulDF(const D df, Vec<D> x, Vec<D> y) 
 #endif
 }
 
-// Add (v0 + 1) + v2
-// Translated from common/df.h:59 vadd_vf_3vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Add3(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2) {
-  return Add(Add(v0, v1), v2);
-}
-
-// Computes x + y in double-float precision, sped up by assuming |x| > |y|
-// Translated from common/df.h:146 dfadd_vf2_vf_vf2
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddFastDF(const D df, Vec<D> x, Vec2<D> y) {
-  Vec<D> s = Add(x, Get2<0>(y));
-  return Create2(df, s, Add3(df, Sub(x, s), Get2<0>(y), Get2<1>(y)));
-}
-
 // Normalizes a double-float precision representation (redistributes hi vs. lo value)
 // Translated from common/df.h:102 dfnormalize_vf2_vf2
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) NormalizeDF(const D df, Vec2<D> t) {
   Vec<D> s = Add(Get2<0>(t), Get2<1>(t));
   return Create2(df, s, Add(Sub(Get2<0>(t), s), Get2<1>(t)));
+}
+
+// Computes x + y in double-float precision, sped up by assuming |x| > |y|
+// Translated from common/df.h:129 dfadd_vf2_vf2_vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddFastDF(const D df, Vec2<D> x, Vec<D> y) {
+  Vec<D> s = Add(Get2<0>(x), y);
+  return Create2(df, s, Add3(df, Sub(Get2<0>(x), s), y, Get2<1>(x)));
 }
 
 // Computes x * y in double-float precision
@@ -662,14 +670,6 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) MulDF(const D df, Vec2<D> x, Vec<D> y)
 #endif
 }
 
-// Computes x + y in double-float precision, sped up by assuming |x| > |y|
-// Translated from common/df.h:129 dfadd_vf2_vf2_vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddFastDF(const D df, Vec2<D> x, Vec<D> y) {
-  Vec<D> s = Add(Get2<0>(x), y);
-  return Create2(df, s, Add3(df, Sub(Get2<0>(x), s), y, Get2<1>(x)));
-}
-
 // Computes x + y in double-float precision
 // Translated from common/df.h:139 dfadd2_vf2_vf2_vf
 template<class D>
@@ -688,27 +688,6 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddDF(const D df, Vec2<D> x, Vec2<D> y
   Vec<D> v = Sub(s, Get2<0>(x));
   Vec<D> t = Add(Sub(Get2<0>(x), Sub(s, v)), Sub(Get2<0>(y), v));
   return Create2(df, s, Add(t, Add(Get2<1>(x), Get2<1>(y))));
-}
-
-// Computes x^2 in double-float precision
-// Translated from common/df.h:196 dfsqu_vf2_vf2
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SquareDF(const D df, Vec2<D> x) {
-#if HWY_SLEEF_HAS_FMA
-  Vec<D> s = Mul(Get2<0>(x), Get2<0>(x));
-  return Create2(df, s, MulAdd(Add(Get2<0>(x), Get2<0>(x)), Get2<1>(x), MulSub(Get2<0>(x), Get2<0>(x), s)));
-#else
-  Vec<D> xh = LowerPrecision(df, Get2<0>(x)), xl = Sub(Get2<0>(x), xh);
-
-  Vec<D> s = Mul(Get2<0>(x), Get2<0>(x)), t;
-
-  t = MulAdd(xh, xh, Neg(s));
-  t = MulAdd(Add(xh, xh), xl, t);
-  t = MulAdd(xl, xl, t);
-  t = MulAdd(Get2<0>(x), Add(Get2<1>(x), Get2<1>(x)), t);
-
-  return Create2(df, s, t);
-#endif
 }
 
 // Computes x * y in double-float precision
@@ -730,6 +709,27 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) MulDF(const D df, Vec2<D> x, Vec2<D> y
   t = MulAdd(xl, yl, t);
   t = MulAdd(Get2<0>(x), Get2<1>(y), t);
   t = MulAdd(Get2<1>(x), Get2<0>(y), t);
+
+  return Create2(df, s, t);
+#endif
+}
+
+// Computes x^2 in double-float precision
+// Translated from common/df.h:196 dfsqu_vf2_vf2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SquareDF(const D df, Vec2<D> x) {
+#if HWY_SLEEF_HAS_FMA
+  Vec<D> s = Mul(Get2<0>(x), Get2<0>(x));
+  return Create2(df, s, MulAdd(Add(Get2<0>(x), Get2<0>(x)), Get2<1>(x), MulSub(Get2<0>(x), Get2<0>(x), s)));
+#else
+  Vec<D> xh = LowerPrecision(df, Get2<0>(x)), xl = Sub(Get2<0>(x), xh);
+
+  Vec<D> s = Mul(Get2<0>(x), Get2<0>(x)), t;
+
+  t = MulAdd(xh, xh, Neg(s));
+  t = MulAdd(Add(xh, xh), xl, t);
+  t = MulAdd(xl, xl, t);
+  t = MulAdd(Get2<0>(x), Add(Get2<1>(x), Get2<1>(x)), t);
 
   return Create2(df, s, t);
 #endif
@@ -768,6 +768,15 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) ExpDF(const D df, Vec2<D> d) {
   return t;
 }
 
+// Computes x + y in double-float precision
+// Translated from common/df.h:116 dfadd2_vf2_vf_vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddDF(const D df, Vec<D> x, Vec<D> y) {
+  Vec<D> s = Add(x, y);
+  Vec<D> v = Sub(s, x);
+  return Create2(df, s, Add(Sub(x, Sub(s, v)), Sub(y, v)));
+}
+
 // Add ((v0 + 1) + v2) + v3
 // Translated from common/df.h:63 vadd_vf_4vf
 template<class D>
@@ -783,36 +792,6 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddFastDF(const D df, Vec2<D> x, Vec2<
 
   Vec<D> s = Add(Get2<0>(x), Get2<0>(y));
   return Create2(df, s, Add4(df, Sub(Get2<0>(x), s), Get2<0>(y), Get2<1>(x), Get2<1>(y)));
-}
-
-// Computes x + y in double-float precision
-// Translated from common/df.h:116 dfadd2_vf2_vf_vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddDF(const D df, Vec<D> x, Vec<D> y) {
-  Vec<D> s = Add(x, y);
-  Vec<D> v = Sub(s, x);
-  return Create2(df, s, Add(Sub(x, Sub(s, v)), Sub(y, v)));
-}
-
-// Computes x * y in double-float precision
-// Translated from common/df.h:107 dfscale_vf2_vf2_vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) ScaleDF(const D df, Vec2<D> d, Vec<D> s) {
-  return Create2(df, Mul(Get2<0>(d), s), Mul(Get2<1>(d), s));
-}
-
-// Integer log of x, "but the argument must be a normalized value"
-// Translated from libm/sleefsimdsp.c:497 vilogb2k_vi2_vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<RebindToSigned<D>>) ILogB2(const D df, Vec<D> d) {
-  RebindToUnsigned<D> du;
-  RebindToSigned<D> di;
-  
-  Vec<RebindToSigned<D>> q = BitCast(di, d);
-  q = BitCast(di, ShiftRight<23>(BitCast(du, q)));
-  q = And(q, Set(di, 0xff));
-  q = Sub(q, Set(di, 0x7f));
-  return q;
 }
 
 // Computes x / y in double-float precision
@@ -849,6 +828,27 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) DivDF(const D df, Vec2<D> n, Vec2<D> d
 
   return Create2(df, s, MulAdd(t, Sub(Get2<1>(n), Mul(s, Get2<1>(d))), u));
 #endif
+}
+
+// Computes x * y in double-float precision
+// Translated from common/df.h:107 dfscale_vf2_vf2_vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) ScaleDF(const D df, Vec2<D> d, Vec<D> s) {
+  return Create2(df, Mul(Get2<0>(d), s), Mul(Get2<1>(d), s));
+}
+
+// Integer log of x, "but the argument must be a normalized value"
+// Translated from libm/sleefsimdsp.c:497 vilogb2k_vi2_vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<RebindToSigned<D>>) ILogB2(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Vec<RebindToSigned<D>> q = BitCast(di, d);
+  q = BitCast(di, ShiftRight<23>(BitCast(du, q)));
+  q = And(q, Set(di, 0xff));
+  q = Sub(q, Set(di, 0x7f));
+  return q;
 }
 
 // Sets the exponent of 'x' to 2^e. Very fast, "no denormal"
@@ -956,56 +956,6 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SqrtDF(const D df, Vec2<D> d) {
   return ScaleDF(df, MulDF(df, AddDF(df, d, MulDF(df, t, t)), RecDF(df, t)), Set(df, 0.5));
 }
 
-// Computes ln(x) in double-float precision (version 1)
-// Translated from libm/sleefsimdsp.c:2198 logkf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) LogDF(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
-  
-  Vec2<D> x, x2;
-  Vec<D> t, m;
-
-#if !(HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3)
-  Mask<D> o = Lt(d, Set(df, FloatMin));
-  d = IfThenElse(o, Mul(d, Set(df, (float)(INT64_C(1) << 32) * (float)(INT64_C(1) << 32))), d);
-  Vec<RebindToSigned<D>> e = ILogB2(df, Mul(d, Set(df, 1.0f/0.75f)));
-  m = LoadExp3(df, d, Neg(e));
-  e = IfThenElse(RebindMask(di, o), Sub(e, Set(di, 64)), e);
-#else
-  Vec<D> e = GetExponent(Mul(d, Set(df, 1.0f/0.75f)));
-  e = IfThenElse(Eq(e, Inf(df)), Set(df, 128.0f), e);
-  m = GetMantissa(d);
-#endif
-
-  x = DivDF(df, AddDF(df, Set(df, -1), m), AddDF(df, Set(df, 1), m));
-  x2 = SquareDF(df, x);
-
-  t = Set(df, 0.240320354700088500976562);
-  t = MulAdd(t, Get2<0>(x2), Set(df, 0.285112679004669189453125));
-  t = MulAdd(t, Get2<0>(x2), Set(df, 0.400007992982864379882812));
-  Vec2<D> c = Create2(df, Set(df, 0.66666662693023681640625f), Set(df, 3.69183861259614332084311e-09f));
-
-#if !(HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3)
-  Vec2<D> s = MulDF(df, Create2(df, Set(df, 0.69314718246459960938f), Set(df, -1.904654323148236017e-09f)), ConvertTo(df, e));
-#else
-  Vec2<D> s = MulDF(df, Create2(df, Set(df, 0.69314718246459960938f), Set(df, -1.904654323148236017e-09f)), e);
-#endif
-
-  s = AddFastDF(df, s, ScaleDF(df, x, Set(df, 2)));
-  s = AddFastDF(df, s, MulDF(df, MulDF(df, x2, x),
-					     AddDF(df, MulDF(df, x2, t), c)));
-  return s;
-}
-
-// Create a mask of which is true if x's sign bit is set
-// Translated from libm/sleefsimdsp.c:472 vsignbit_vo_vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Mask<D>) SignBitMask(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
-  
-  return RebindMask(df, Eq(And(BitCast(di, d), Set(di, 0x80000000)), Set(di, 0x80000000)));
-}
-
 // Sets the exponent of 'x' to 2^e
 // Translated from libm/sleefsimdsp.c:520 vldexp_vf_vf_vi2
 template<class D>
@@ -1056,6 +1006,84 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) ExpDF_float(const D df, Vec2<D> d) {
   u = BitCast(df, IfThenZeroElse(RebindMask(du, Lt(Get2<0>(d), Set(df, -104))), BitCast(du, u)));
   
   return u;
+}
+
+// Computes ln(x) in double-float precision (version 1)
+// Translated from libm/sleefsimdsp.c:2198 logkf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) LogDF(const D df, Vec<D> d) {
+  RebindToSigned<D> di;
+  
+  Vec2<D> x, x2;
+  Vec<D> t, m;
+
+#if !(HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3)
+  Mask<D> o = Lt(d, Set(df, FloatMin));
+  d = IfThenElse(o, Mul(d, Set(df, (float)(INT64_C(1) << 32) * (float)(INT64_C(1) << 32))), d);
+  Vec<RebindToSigned<D>> e = ILogB2(df, Mul(d, Set(df, 1.0f/0.75f)));
+  m = LoadExp3(df, d, Neg(e));
+  e = IfThenElse(RebindMask(di, o), Sub(e, Set(di, 64)), e);
+#else
+  Vec<D> e = GetExponent(Mul(d, Set(df, 1.0f/0.75f)));
+  e = IfThenElse(Eq(e, Inf(df)), Set(df, 128.0f), e);
+  m = GetMantissa(d);
+#endif
+
+  x = DivDF(df, AddDF(df, Set(df, -1), m), AddDF(df, Set(df, 1), m));
+  x2 = SquareDF(df, x);
+
+  t = Set(df, 0.240320354700088500976562);
+  t = MulAdd(t, Get2<0>(x2), Set(df, 0.285112679004669189453125));
+  t = MulAdd(t, Get2<0>(x2), Set(df, 0.400007992982864379882812));
+  Vec2<D> c = Create2(df, Set(df, 0.66666662693023681640625f), Set(df, 3.69183861259614332084311e-09f));
+
+#if !(HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3)
+  Vec2<D> s = MulDF(df, Create2(df, Set(df, 0.69314718246459960938f), Set(df, -1.904654323148236017e-09f)), ConvertTo(df, e));
+#else
+  Vec2<D> s = MulDF(df, Create2(df, Set(df, 0.69314718246459960938f), Set(df, -1.904654323148236017e-09f)), e);
+#endif
+
+  s = AddFastDF(df, s, ScaleDF(df, x, Set(df, 2)));
+  s = AddFastDF(df, s, MulDF(df, MulDF(df, x2, x),
+					     AddDF(df, MulDF(df, x2, t), c)));
+  return s;
+}
+
+// Create a mask of which is true if x's sign bit is set
+// Translated from libm/sleefsimdsp.c:472 vsignbit_vo_vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Mask<D>) SignBitMask(const D df, Vec<D> d) {
+  RebindToSigned<D> di;
+  
+  return RebindMask(df, Eq(And(BitCast(di, d), Set(di, 0x80000000)), Set(di, 0x80000000)));
+}
+
+// Add (((v0 + 1) + v2) + v3) + v4
+// Translated from common/df.h:67 vadd_vf_5vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Add5(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2, Vec<D> v3, Vec<D> v4) {
+  return Add4(df, Add(v0, v1), v2, v3, v4);
+}
+
+// Add ((((v0 + 1) + v2) + v3) + v4) + v5
+// Translated from common/df.h:71 vadd_vf_6vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Add6(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2, Vec<D> v3, Vec<D> v4, Vec<D> v5) {
+  return Add5(df, Add(v0, v1), v2, v3, v4, v5);
+}
+
+// Computes x * y in double-float precision, returning result as single-precision
+// Translated from common/df.h:210 dfmul_vf_vf2_vf2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) MulDF_float(const D df, Vec2<D> x, Vec2<D> y) {
+#if HWY_SLEEF_HAS_FMA
+  return MulAdd(Get2<0>(x), Get2<0>(y), MulAdd(Get2<1>(x), Get2<0>(y), Mul(Get2<0>(x), Get2<1>(y))));
+#else
+  Vec<D> xh = LowerPrecision(df, Get2<0>(x)), xl = Sub(Get2<0>(x), xh);
+  Vec<D> yh = LowerPrecision(df, Get2<0>(y)), yl = Sub(Get2<0>(y), yh);
+
+  return Add6(df, Mul(Get2<1>(x), yh), Mul(xh, Get2<1>(y)), Mul(xl, yl), Mul(xh, yl), Mul(xl, yh), Mul(xh, yh));
+#endif
 }
 
 // Bitwise or of x with sign bit of y
@@ -1114,34 +1142,6 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec3<D>) PayneHanekReduction(const D df, Vec<D>
   x = MulDF(df, x, Create2(df, Set(df, 3.1415927410125732422f*2), Set(df, -8.7422776573475857731e-08f*2)));
   x = IfThenElse(df, Lt(Abs(a), Set(df, 0.7f)), Create2(df, a, Set(df, 0)), x);
   return Create3(df, Get2<0>(x), Get2<1>(x), BitCast(df, q));
-}
-
-// Add (((v0 + 1) + v2) + v3) + v4
-// Translated from common/df.h:67 vadd_vf_5vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Add5(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2, Vec<D> v3, Vec<D> v4) {
-  return Add4(df, Add(v0, v1), v2, v3, v4);
-}
-
-// Add ((((v0 + 1) + v2) + v3) + v4) + v5
-// Translated from common/df.h:71 vadd_vf_6vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Add6(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2, Vec<D> v3, Vec<D> v4, Vec<D> v5) {
-  return Add5(df, Add(v0, v1), v2, v3, v4, v5);
-}
-
-// Computes x * y in double-float precision, returning result as single-precision
-// Translated from common/df.h:210 dfmul_vf_vf2_vf2
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) MulDF_float(const D df, Vec2<D> x, Vec2<D> y) {
-#if HWY_SLEEF_HAS_FMA
-  return MulAdd(Get2<0>(x), Get2<0>(y), MulAdd(Get2<1>(x), Get2<0>(y), Mul(Get2<0>(x), Get2<1>(y))));
-#else
-  Vec<D> xh = LowerPrecision(df, Get2<0>(x)), xl = Sub(Get2<0>(x), xh);
-  Vec<D> yh = LowerPrecision(df, Get2<0>(y)), yl = Sub(Get2<0>(y), yh);
-
-  return Add6(df, Mul(Get2<1>(x), yh), Mul(xh, Get2<1>(y)), Mul(xl, yl), Mul(xh, yl), Mul(xl, yh), Mul(xh, yh));
-#endif
 }
 
 // Computes 1/x in double-float precision
@@ -1327,14 +1327,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) LoadExp2(const D df, Vec<D> d, Vec<Reb
   return Mul(Mul(d, Pow2I(df, ShiftRight<1>(e))), Pow2I(df, Sub(e, ShiftRight<1>(e))));
 }
 
-// Normalizes a double-double precision representation (redistributes hi vs. lo value)
-// Translated from common/dd.h:108 ddnormalize_vd2_vd2
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) NormalizeDD(const D df, Vec2<D> t) {
-  Vec<D> s = Add(Get2<0>(t), Get2<1>(t));
-  return Create2(df, s, Add(Sub(Get2<0>(t), s), Get2<1>(t)));
-}
-
 // Add (v0 + 1) + v2
 // Translated from common/dd.h:59 vadd_vd_3vd
 template<class D>
@@ -1350,15 +1342,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec<D> x, Vec2<
   return Create2(df, s, Add3(df, Sub(x, s), Get2<0>(y), Get2<1>(y)));
 }
 
-// Set the bottom half of mantissa bits to 0 (used in some double-double math)
-// Translated from common/dd.h:33 vupper_vd_vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) LowerPrecision(const D df, Vec<D> d) {
-  RebindToUnsigned<D> du;
-  
-  return BitCast(df, And(BitCast(du, d), Set(du, (static_cast<uint64_t>(0xffffffff) << 32) | 0xf8000000)));
-}
-
 // Add ((v0 + 1) + v2) + v3
 // Translated from common/dd.h:63 vadd_vd_4vd
 template<class D>
@@ -1371,6 +1354,15 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Add4(const D df, Vec<D> v0, Vec<D> v1,
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Add5(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2, Vec<D> v3, Vec<D> v4) {
   return Add4(df, Add(v0, v1), v2, v3, v4);
+}
+
+// Set the bottom half of mantissa bits to 0 (used in some double-double math)
+// Translated from common/dd.h:33 vupper_vd_vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) LowerPrecision(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  
+  return BitCast(df, And(BitCast(du, d), Set(du, (static_cast<uint64_t>(0xffffffff) << 32) | 0xf8000000)));
 }
 
 // Computes x * y in double-double precision
@@ -1389,11 +1381,55 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) MulDD(const D df, Vec<D> x, Vec<D> y)
 #endif
 }
 
+// Normalizes a double-double precision representation (redistributes hi vs. lo value)
+// Translated from common/dd.h:108 ddnormalize_vd2_vd2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) NormalizeDD(const D df, Vec2<D> t) {
+  Vec<D> s = Add(Get2<0>(t), Get2<1>(t));
+  return Create2(df, s, Add(Sub(Get2<0>(t), s), Get2<1>(t)));
+}
+
+// Computes x + y in double-double precision
+// Translated from common/dd.h:140 ddadd2_vd2_vd2_vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddDD(const D df, Vec2<D> x, Vec<D> y) {
+  Vec<D> s = Add(Get2<0>(x), y);
+  Vec<D> v = Sub(s, Get2<0>(x));
+  Vec<D> w = Add(Sub(Get2<0>(x), Sub(s, v)), Sub(y, v));
+  return Create2(df, s, Add(w, Get2<1>(x)));
+}
+
+// Computes x + y in double-double precision, sped up by assuming |x| > |y|
+// Translated from common/dd.h:159 ddadd_vd2_vd2_vd2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec2<D> x, Vec2<D> y) {
+  // |x| >= |y|
+
+  Vec<D> s = Add(Get2<0>(x), Get2<0>(y));
+  return Create2(df, s, Add4(df, Sub(Get2<0>(x), s), Get2<0>(y), Get2<1>(x), Get2<1>(y)));
+}
+
 // Add ((((v0 + 1) + v2) + v3) + v4) + v5
 // Translated from common/dd.h:71 vadd_vd_6vd
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Add6(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2, Vec<D> v3, Vec<D> v4, Vec<D> v5) {
   return Add5(df, Add(v0, v1), v2, v3, v4, v5);
+}
+
+// Computes x * y in double-double precision
+// Translated from common/dd.h:222 ddmul_vd2_vd2_vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) MulDD(const D df, Vec2<D> x, Vec<D> y) {
+#if HWY_SLEEF_HAS_FMA
+  Vec<D> s = Mul(Get2<0>(x), y);
+  return Create2(df, s, MulAdd(Get2<1>(x), y, MulSub(Get2<0>(x), y, s)));
+#else
+  Vec<D> xh = LowerPrecision(df, Get2<0>(x)), xl = Sub(Get2<0>(x), xh);
+  Vec<D> yh = LowerPrecision(df, y  ), yl = Sub(y, yh);
+
+  Vec<D> s = Mul(Get2<0>(x), y);
+  return Create2(df, s, Add6(df, Mul(xh, yh), Neg(s), Mul(xl, yh), Mul(xh, yl), Mul(xl, yl), Mul(Get2<1>(x), y)));
+#endif
 }
 
 // Add (((((v0 + 1) + v2) + v3) + v4) + v5) + v6
@@ -1434,42 +1470,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SquareDD(const D df, Vec2<D> x) {
 #endif
 }
 
-// Computes x + y in double-double precision, sped up by assuming |x| > |y|
-// Translated from common/dd.h:159 ddadd_vd2_vd2_vd2
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec2<D> x, Vec2<D> y) {
-  // |x| >= |y|
-
-  Vec<D> s = Add(Get2<0>(x), Get2<0>(y));
-  return Create2(df, s, Add4(df, Sub(Get2<0>(x), s), Get2<0>(y), Get2<1>(x), Get2<1>(y)));
-}
-
-// Computes x + y in double-double precision
-// Translated from common/dd.h:140 ddadd2_vd2_vd2_vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddDD(const D df, Vec2<D> x, Vec<D> y) {
-  Vec<D> s = Add(Get2<0>(x), y);
-  Vec<D> v = Sub(s, Get2<0>(x));
-  Vec<D> w = Add(Sub(Get2<0>(x), Sub(s, v)), Sub(y, v));
-  return Create2(df, s, Add(w, Get2<1>(x)));
-}
-
-// Computes x * y in double-double precision
-// Translated from common/dd.h:222 ddmul_vd2_vd2_vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) MulDD(const D df, Vec2<D> x, Vec<D> y) {
-#if HWY_SLEEF_HAS_FMA
-  Vec<D> s = Mul(Get2<0>(x), y);
-  return Create2(df, s, MulAdd(Get2<1>(x), y, MulSub(Get2<0>(x), y, s)));
-#else
-  Vec<D> xh = LowerPrecision(df, Get2<0>(x)), xl = Sub(Get2<0>(x), xh);
-  Vec<D> yh = LowerPrecision(df, y  ), yl = Sub(y, yh);
-
-  Vec<D> s = Mul(Get2<0>(x), y);
-  return Create2(df, s, Add6(df, Mul(xh, yh), Neg(s), Mul(xl, yh), Mul(xh, yl), Mul(xl, yl), Mul(Get2<1>(x), y)));
-#endif
-}
-
 // Computes e^x in double-double precision
 // Translated from libm/sleefsimddp.c:2397 expk2
 template<class D>
@@ -1503,25 +1503,21 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) ExpDD(const D df, Vec2<D> d) {
   return t;
 }
 
-// Computes x * y in double-double precision
-// Translated from common/dd.h:113 ddscale_vd2_vd2_vd
+// Computes x + y in double-double precision
+// Translated from common/dd.h:124 ddadd2_vd2_vd_vd
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) ScaleDD(const D df, Vec2<D> d, Vec<D> s) {
-  return Create2(df, Mul(Get2<0>(d), s), Mul(Get2<1>(d), s));
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddDD(const D df, Vec<D> x, Vec<D> y) {
+  Vec<D> s = Add(x, y);
+  Vec<D> v = Sub(s, x);
+  return Create2(df, s, Add(Sub(x, Sub(s, v)), Sub(y, v)));
 }
 
-// Integer log of x, "but the argument must be a normalized value"
-// Translated from common/commonfuncs.h:300 vilogb2k_vi_vd
+// Computes x + y in double-double precision, sped up by assuming |x| > |y|
+// Translated from common/dd.h:130 ddadd_vd2_vd2_vd
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<RebindToSigned<D>>) ILogB2(const D df, Vec<D> d) {
-  RebindToUnsigned<D> du;
-  RebindToSigned<D> di;
-  
-  Vec<RebindToSigned<D>> q = BitCast(di, ShiftRight<32>(BitCast(du, d)));
-  q = BitCast(di, ShiftRight<20>(BitCast(du, q)));
-  q = And(q, Set(di, 0x7ff));
-  q = Sub(q, Set(di, 0x3ff));
-  return q;
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec2<D> x, Vec<D> y) {
+  Vec<D> s = Add(Get2<0>(x), y);
+  return Create2(df, s, Add3(df, Sub(Get2<0>(x), s), y, Get2<1>(x)));
 }
 
 // Sub (v0 - 1) - v2
@@ -1570,21 +1566,25 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) DivDD(const D df, Vec2<D> n, Vec2<D> 
 #endif
 }
 
-// Computes x + y in double-double precision
-// Translated from common/dd.h:124 ddadd2_vd2_vd_vd
+// Computes x * y in double-double precision
+// Translated from common/dd.h:113 ddscale_vd2_vd2_vd
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddDD(const D df, Vec<D> x, Vec<D> y) {
-  Vec<D> s = Add(x, y);
-  Vec<D> v = Sub(s, x);
-  return Create2(df, s, Add(Sub(x, Sub(s, v)), Sub(y, v)));
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) ScaleDD(const D df, Vec2<D> d, Vec<D> s) {
+  return Create2(df, Mul(Get2<0>(d), s), Mul(Get2<1>(d), s));
 }
 
-// Computes x + y in double-double precision, sped up by assuming |x| > |y|
-// Translated from common/dd.h:130 ddadd_vd2_vd2_vd
+// Integer log of x, "but the argument must be a normalized value"
+// Translated from common/commonfuncs.h:300 vilogb2k_vi_vd
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec2<D> x, Vec<D> y) {
-  Vec<D> s = Add(Get2<0>(x), y);
-  return Create2(df, s, Add3(df, Sub(Get2<0>(x), s), y, Get2<1>(x)));
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<RebindToSigned<D>>) ILogB2(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Vec<RebindToSigned<D>> q = BitCast(di, ShiftRight<32>(BitCast(du, d)));
+  q = BitCast(di, ShiftRight<20>(BitCast(du, q)));
+  q = And(q, Set(di, 0x7ff));
+  q = Sub(q, Set(di, 0x3ff));
+  return q;
 }
 
 // Sets the exponent of 'x' to 2^e. Very fast, "no denormal"
@@ -1719,23 +1719,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) ExpDD_double(const D df, Vec2<D> d) {
   return u;
 }
 
-// Bitwise or of x with sign bit of y
-// Translated from common/commonfuncs.h:224 vorsign_vd_vd_vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) OrSignBit(const D df, Vec<D> x, Vec<D> y) {
-  RebindToUnsigned<D> du;
-  
-  return BitCast(df, Or(BitCast(du, x), SignBit(df, y)));
-}
-
-// True if d is an odd (assuming d is an integer)
-// Translated from common/commonfuncs.h:282 visodd_vo_vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) IsOdd(const D df, Vec<D> d) {
-  Vec<D> x = Mul(d, Set(df, 0.5));
-  return Ne(Round(x), x);
-}
-
 // Computes ln(x) in double-double precision (version 1)
 // Translated from libm/sleefsimddp.c:2223 logk
 template<class D>
@@ -1778,13 +1761,13 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) LogDD(const D df, Vec<D> d) {
   return s;
 }
 
-// Create a mask of which is true if x's sign bit is set
-// Translated from common/commonfuncs.h:200 vsignbit_vo_vd
+// Bitwise or of x with sign bit of y
+// Translated from common/commonfuncs.h:224 vorsign_vd_vd_vd
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) SignBitMask(const D df, Vec<D> d) {
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) OrSignBit(const D df, Vec<D> x, Vec<D> y) {
   RebindToUnsigned<D> du;
   
-  return RebindMask(df, Eq(And(BitCast(du, d), BitCast(du, Set(df, -0.0))), BitCast(du, Set(df, -0.0))));
+  return BitCast(df, Or(BitCast(du, x), SignBit(df, y)));
 }
 
 // True if d is an integer
@@ -1792,6 +1775,23 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) SignBitMask(const D df, Vec<D> d) {
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) IsInt(const D df, Vec<D> d) {
   return Eq(Round(d), d);
+}
+
+// True if d is an odd (assuming d is an integer)
+// Translated from common/commonfuncs.h:282 visodd_vo_vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) IsOdd(const D df, Vec<D> d) {
+  Vec<D> x = Mul(d, Set(df, 0.5));
+  return Ne(Round(x), x);
+}
+
+// Create a mask of which is true if x's sign bit is set
+// Translated from common/commonfuncs.h:200 vsignbit_vo_vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) SignBitMask(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  
+  return RebindMask(df, Eq(And(BitCast(du, d), BitCast(du, Set(df, -0.0))), BitCast(du, Set(df, -0.0))));
 }
 
 }

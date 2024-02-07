@@ -648,8 +648,9 @@ def topo_sort(start, callgraph):
     if start not in callgraph:
         return [start]
     
+    # Use sorted children to try to achieve a more stable ordering
     res = []
-    for child in callgraph[start]:
+    for child in sorted(callgraph[start]):
         res += [x for x in topo_sort(child, callgraph) if x not in res]
     
     res.append(start)
