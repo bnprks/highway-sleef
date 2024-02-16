@@ -63,21 +63,44 @@ def main():
         "xsinf",
         "xcosf",
         "xtanf",
+        "XSINCOSF_U1",
+        "XSINCOSF",
+        "XSINCOSPIF_U05",
+        "XSINCOSPIF_U35",
+        "xsinpif_u05",
+        "xcospif_u05",
+        "xacosf_u1",
+        "xasinf_u1",
+        "xasinf",
+        "xacosf",
+        "xatanf",
+        "xatanf_u1",
+        "xatan2f_u1",
+        "xatan2f",
         "xsinhf",
         "xcoshf",
         "xtanhf",
         "xsinhf_u35",
         "xcoshf_u35",
         "xtanhf_u35",
-        "xacosf_u1",
-        "xasinf_u1",
         "xasinhf",
-        "xacosf",
-        "xasinf",
-        "xatanf",
         "xacoshf",
-        "xatanf_u1",
         "xatanhf",
+        "xerff_u1",
+        "xerfcf_u15",
+        "xtgammaf_u1",
+        "xlgammaf_u1",
+        "xfmodf",
+        "xremainderf",
+        "xldexpf",
+        "xfrfrexpf",
+        "xexpfrexpf",
+        "xilogbf",
+        "XMODFF",
+        "xnextafterf",
+        "xfastsinf_u3500",
+        "xfastcosf_u3500",
+        "xfastpowf_u3500",
         # Double-precision ops
         "xexp",
         "xexp2",
@@ -95,6 +118,47 @@ def main():
         "xhypot_u05",
         "xhypot_u35",
         "xpow",
+        "xsin_u1",
+        "xcos_u1",
+        "xtan_u1",
+        "xsin",
+        "xcos",
+        "xtan",
+        "xacos_u1",
+        "xasin_u1",
+        "xatan_u1",
+        "xacos",
+        "xasin",
+        "xatan",
+        "xatan2_u1",
+        "xatan2",
+        "XSINCOS_U1",
+        "XSINCOS",
+        "XSINCOSPI_U05",
+        "XSINCOSPI_U35",
+        "xsinpi_u05",
+        "xcospi_u05",
+        "xsinh",
+        "xcosh",
+        "xtanh",
+        "xsinh_u35",
+        "xcosh_u35",
+        "xtanh_u35",
+        "xasinh",
+        "xacosh",
+        "xatanh",
+        "xerf_u1",
+        "xerfc_u15",
+        "xtgamma_u1",
+        "xlgamma_u1",
+        "xfmod",
+        "xremainder",
+        "xldexp",
+        "xfrfrexp",
+        "xexpfrexp",
+        "xilogb",
+        "XMODF",
+        "xnextafter",
     ]
 
     # Read data files to register translations for simd ops, intermediate functions, and types
@@ -177,8 +241,6 @@ def main():
     code = []
     decls = []
     for f in fns_to_translate:
-        if f == "xsqrtf_u35":
-            pass #breakpoint()
         valid_nodes = [n for n, exclude in function_nodes[f] if not exclude]
         if len(valid_nodes) == 0:
             if len(function_nodes[f]) > 1:
@@ -383,10 +445,14 @@ def macro_conditonal_translator(in_condition, out_condition):
             assert node.children[2].text == b"\n"
             first_line_nodes = 3
         else:
-            assert node.children[0].text == b"#ifdef"
+            assert node.children[0].text in [b"#ifdef", b"#ifndef"]
             assert node.field_name_for_child(1) == "name"
             assert node.children[2].is_named
             first_line_nodes = 2
+            if node.children[0].text == b"#ifndef":
+                # We could presumably swap 0 and 1 for ifndef, but skip for now
+                # since it hasn't come up yet in practice
+                assert out_condition not in [b"0", b"1"]
         
 
         if out_condition == b"0":
@@ -430,6 +496,10 @@ def translate_tag_name_conflict(node, ctx):
         return node.text + b"_"
     return node.text
 
+def translate_pointer_argument(node, ctx):
+    assert node.type == "pointer_declarator"
+    return node.text.replace(b"*", b"&")
+
 def ancestors(node):
     while node.parent is not None:
         node = node.parent
@@ -447,6 +517,7 @@ def translate_function(node):
         "const_id": translate_constant,
         "macro_conditional": translate_macro_conditional,
         "tag_name_conflict": translate_tag_name_conflict,
+        "pointer_argument": translate_pointer_argument,
     }
 
     captures = c_query(
@@ -459,6 +530,7 @@ def translate_function(node):
     (preproc_ifdef) @macro_conditional
     ((identifier) @tag_name_conflict
         (#match? @tag_name_conflict "^d[iu](32)?$"))
+    (parameter_declaration (pointer_declarator) @pointer_argument)
     """
     ).captures(node)
     fn_body = node.child_by_field_name("body")
@@ -496,12 +568,8 @@ def translate_function(node):
         name = node.child_by_field_name("declarator").child_by_field_name("declarator").text.decode()
         print(f"WARNING: Possibly unknown identifiers in {name}: ", b", ".join(unknown_ids).decode(), file=sys.stderr)
 
-    ctx = {
-        "text": root_node.text,
-        "capture_handler": {n.id: handlers[t] for (n, t) in captures},
-        "has_child_match": set(n.id for c in captures for n in ancestors(c[0])),
-        "tag_types": set(),
-    }
+    ctx = make_translation_context(root_node, handlers, captures)
+    ctx["tag_types"] = set()
 
     # Determine if function should be restricted to floats or doubles:
     # 1. If return type is float/double, use that
@@ -522,6 +590,8 @@ def translate_function(node):
     signature = translate_tree(node.child_by_field_name("declarator"), ctx)
     body = translate_tree(node.child_by_field_name("body"), ctx)
     
+    
+    
     tag_defs = []
     for tag in ctx["tag_types"]:
         if tag == b"df":
@@ -541,14 +611,32 @@ def translate_function(node):
         tag_defs += b"\n  \n"
     body = b"{\n" + tag_defs + body.lstrip(b"{\n")
     
-    return b" ".join([return_type, signature, body])
+    return postprocess_function(b" ".join([return_type, signature, body]))
+
+def make_translation_context(node, handlers, captures):
+    # We make a list of handlers to handle cases where >1 capture is relevant,
+    # which so far happens for number literals in post-processing.
+    # `translate_tree` will apply the first handler which returns a result.
+    capture_handler = {}
+    for n, t in captures:
+        if n.id not in capture_handler:
+            capture_handler[n.id] = [handlers[t]]
+        else:
+            capture_handler[n.id].append(handlers[t])
+    
+    return {
+        "text": node.text,
+        "capture_handler": capture_handler,
+        "has_child_match": set(n.id for c in captures for n in ancestors(c[0])),
+    }
 
 def translate_tree(node, ctx):
     # If the current node is a match, call the appropriate handler
     if node.id in ctx["capture_handler"]:
-        res = ctx["capture_handler"][node.id](node, ctx)
-        if res is not None:
-            return res
+        for f in ctx["capture_handler"][node.id]:
+            res = f(node, ctx)
+            if res is not None:
+                return res
 
     if node.id not in ctx["has_child_match"]:
         return node.text
@@ -568,9 +656,15 @@ def translate_preproc_define(node, ctx):
     assert node.type == "preproc_def"
     name = node.child_by_field_name("name")
     value = node.child_by_field_name("value")
-    # breakpoint()
     if name.text in constant_translations:
-        value = translate_tree(value, ctx)
+        # Translate the value portion separately since tree-sitter doesn't parse it as code
+        value_node = c_parse(value.text).root_node
+        handlers = {
+            "const_id": translate_constant,
+        }
+        captures = c_query("(identifier) @const_id").captures(value_node)
+        local_ctx = make_translation_context(value_node, handlers, captures)
+        value = translate_tree(value_node, local_ctx)
         if b"//" in value:
             value = value[:value.find(b"//")]
         return (
@@ -617,18 +711,14 @@ def translate_constant_defs(root_node):
     """
     ).captures(root_node)
 
-    ctx = {
-        "text": root_node.text,
-        "capture_handler": {n.id: handlers[t] for (n, t) in captures},
-        "has_child_match": set(n.id for c in captures for n in ancestors(c[0])),
-        
-    }
+    ctx = make_translation_context(root_node, handlers, captures)
 
     query_top_level = c_query(
     """
     (translation_unit (preproc_ifdef (preproc_if) @if))
     (translation_unit (preproc_ifdef (preproc_def) @define))
     (translation_unit (preproc_ifdef (preproc_ifdef (preproc_def) @define)))
+    (translation_unit (preproc_ifdef (preproc_if (preproc_ifdef (preproc_def) @define))))
     """
     )
     translations = []
@@ -656,6 +746,111 @@ def topo_sort(start, callgraph):
     res.append(start)
     return res
 
+def postprocess_function(text):
+    node = cpp_parse(text).root_node
+
+    def noop(n, ctx):
+        return None
+    
+    handlers = {
+        "shiftright_id": noop,
+        "shiftright_arg": postprocess_shiftright_arg if b"HWY_SLEEF_IF_DOUBLE" in text else noop,
+        "redundant_cast_outer": noop,
+        "redundant_cast_inner": noop,
+        "redundant_cast_call": postprocess_redundant_cast,
+        "estrin_call": noop,
+        "estrin_arg": postprocess_estrin_arg,
+        "comment": postprocess_comment,
+        "macro_variable_decl": postprocess_macro_variable_decl,
+        "constant": postprocess_constant,
+    }
+    captures = cpp_query(
+    """
+    (template_function 
+        name: (identifier) @shiftright_id 
+        arguments: (template_argument_list (number_literal) @shiftright_arg)
+        (#eq? @shiftright_arg 31)
+        (#eq? @shiftright_id ShiftRight))
+    (call_expression 
+        function: (identifier) @redundant_cast_outer
+        arguments: (argument_list (call_expression function: (identifier) @redundant_cast_inner)) @redundant_cast_call
+        (#eq? @redundant_cast_outer @redundant_cast_inner)
+        (#match? @redundant_cast_outer "BitCast|RebindMask"))
+    (call_expression
+        function: (identifier) @estrin_call
+        arguments: (argument_list (call_expression) @estrin_arg)
+        (#eq? @estrin_call Estrin))
+
+    (comment) @comment
+    (preproc_call) @macro_variable_decl
+    (preproc_function_def) @macro_variable_decl
+    (number_literal) @constant
+    """
+    ).captures(node)
+    ctx = make_translation_context(node, handlers, captures)
+    return translate_tree(node, ctx)
+
+def postprocess_shiftright_arg(node, ctx):
+    assert node.type == "number_literal"
+    if node.text == b"31":
+        return b"63"
+    return None
+
+def postprocess_redundant_cast(node, ctx):
+    """Remove the inner function call since we're just doing two casts right after the other"""
+    assert node.type == "argument_list"
+    assert node.parent.child_by_field_name("function").text in [b"BitCast", b"RebindMask"]
+    assert node.named_children[1].child_by_field_name("function").text in [b"BitCast", b"RebindMask"]
+    second_arg = node.named_children[1]
+    return node.text[:(second_arg.start_byte-node.start_byte)] + \
+           node.named_children[1].child_by_field_name("arguments").named_children[1].text + b")"
+
+def postprocess_estrin_arg(node, ctx):
+    """
+    This helps clean up Erf, where the simd_op entry for Estrin
+    inserts Set(df, ...) calls even though the arguments are already
+    vectors returned by IfThenElse.
+    """
+    assert node.type == "call_expression"
+    if node.child_by_field_name("function").text != b"Set":
+        return None
+    if len(node.child_by_field_name("arguments").named_children) != 2:
+        return None
+    second_arg = node.child_by_field_name("arguments").named_children[1]
+    if second_arg.type != "call_expression":
+        return None
+    if second_arg.child_by_field_name("function").text != b"IfThenElse":
+        return None
+    return translate_tree(second_arg, ctx)
+
+def postprocess_comment(node, ctx):
+    """Remove spurious comments that might not make sense in the translated code"""
+    # No empty comments
+    if len(node.text.strip()) == 2:
+        return b""
+    # No comments marking ends of #if blocks
+    if b"#if" in node.text:
+        return b""
+    # No multiline comments
+    if node.start_point[0] != node.end_point[0]:
+        return b""
+    return None
+
+def postprocess_macro_variable_decl(node, ctx):
+    if b"C2V" in node.text:
+        return b""
+    else:
+        print(f"WARNING: macro variable op in function body: '{node.text.decode().strip()}'", file=sys.stderr)
+    return None
+
+def postprocess_constant(node, ctx):
+    # This is used as a cutoff for returning infinity in Pow and Exp for 
+    # double-precision, but I think the SLEEF constant might be slightly too 
+    # low here
+    if node.text == b"709.78271114955742909217217426":
+        return b"709.78271289338399673222338991"
+    return None
+
 FILE_TEMPLATE = textwrap.dedent(
 """
 // This file is translated from the SLEEF vectorized math library.
@@ -681,85 +876,15 @@ FILE_TEMPLATE = textwrap.dedent(
 
 #include <type_traits>
 #include "hwy/highway.h"
+#include "Estrin.h"
+#include "AVX512FloatUtils.h"
 
-extern const float PayneHanekReductionTable_float[]; // Precomputed table of exponent values for Payne Hanek reduction
+extern const float PayneHanekReductionTable_float[];
+extern const double PayneHanekReductionTable_double[];
 
 HWY_BEFORE_NAMESPACE();
 namespace hwy {{
 namespace HWY_NAMESPACE {{
-
-#if HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3
-HWY_API Vec512<float> GetExponent(Vec512<float> x) {{
-  return Vec512<float>{{_mm512_getexp_ps(x.raw)}};
-}}
-HWY_API Vec256<float> GetExponent(Vec256<float> x) {{
-  return Vec256<float>{{_mm256_getexp_ps(x.raw)}};
-}}
-template<size_t N>
-HWY_API Vec128<float, N> GetExponent(Vec128<float, N> x) {{
-  return Vec128<float, N>{{_mm_getexp_ps(x.raw)}};
-}}
-
-HWY_API Vec512<double> GetExponent(Vec512<double> x) {{
-  return Vec512<double>{{_mm512_getexp_pd(x.raw)}};
-}}
-HWY_API Vec256<double> GetExponent(Vec256<double> x) {{
-  return Vec256<double>{{_mm256_getexp_pd(x.raw)}};
-}}
-template<size_t N>
-HWY_API Vec128<double, N> GetExponent(Vec128<double, N> x) {{
-  return Vec128<double, N>{{_mm_getexp_pd(x.raw)}};
-}}
-
-HWY_API Vec512<float> GetMantissa(Vec512<float> x) {{
-  return Vec512<float>{{_mm512_getmant_ps(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
-}}
-HWY_API Vec256<float> GetMantissa(Vec256<float> x) {{
-  return Vec256<float>{{_mm256_getmant_ps(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
-}}
-template<size_t N>
-HWY_API Vec128<float, N> GetMantissa(Vec128<float, N> x) {{
-  return Vec128<float, N>{{_mm_getmant_ps(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
-}}
-
-HWY_API Vec512<double> GetMantissa(Vec512<double> x) {{
-  return Vec512<double>{{_mm512_getmant_pd(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
-}}
-HWY_API Vec256<double> GetMantissa(Vec256<double> x) {{
-  return Vec256<double>{{_mm256_getmant_pd(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
-}}
-template<size_t N>
-HWY_API Vec128<double, N> GetMantissa(Vec128<double, N> x) {{
-  return Vec128<double, N>{{_mm_getmant_pd(x.raw,  _MM_MANT_NORM_p75_1p5, _MM_MANT_SIGN_nan)}};
-}}
-
-template<int I>
-HWY_API Vec512<float> Fixup(Vec512<float> a, Vec512<float> b, Vec512<int> c) {{
-    return Vec512<float>{{_mm512_fixupimm_ps(a.raw, b.raw, c.raw, I)}};
-}}
-template<int I>
-HWY_API Vec256<float> Fixup(Vec256<float> a, Vec256<float> b, Vec256<int> c) {{
-    return Vec256<float>{{_mm256_fixupimm_ps(a.raw, b.raw, c.raw, I)}};
-}}
-template<int I, size_t N>
-HWY_API Vec128<float, N> Fixup(Vec128<float, N> a, Vec128<float, N> b, Vec128<int, N> c) {{
-    return Vec128<float, N>{{_mm_fixupimm_ps(a.raw, b.raw, c.raw, I)}};
-}}
-
-template<int I>
-HWY_API Vec512<double> Fixup(Vec512<double> a, Vec512<double> b, Vec512<int64_t> c) {{
-    return Vec512<double>{{_mm512_fixupimm_pd(a.raw, b.raw, c.raw, I)}};
-}}
-template<int I>
-HWY_API Vec256<double> Fixup(Vec256<double> a, Vec256<double> b, Vec256<int64_t> c) {{
-    return Vec256<double>{{_mm256_fixupimm_pd(a.raw, b.raw, c.raw, I)}};
-}}
-template<int I, size_t N>
-HWY_API Vec128<double, N> Fixup(Vec128<double, N> a, Vec128<double, N> b, Vec128<int64_t, N> c) {{
-    return Vec128<double, N>{{_mm_fixupimm_pd(a.raw, b.raw, c.raw, I)}};
-}}
-#endif
-
 namespace sleef {{
 
 #undef HWY_SLEEF_HAS_FMA
@@ -775,153 +900,6 @@ namespace sleef {{
 {decls}
 
 namespace {{
-
-template<class D>
-using RebindToSigned32 = Rebind<int32_t, D>;
-template<class D>
-using RebindToUnsigned32 = Rebind<uint32_t, D>;
-
-// Estrin's Scheme is a faster method for evaluating large polynomials on
-// super scalar architectures. It works by factoring the Horner's Method
-// polynomial into power of two sub-trees that can be evaluated in parallel.
-// Wikipedia Link: https://en.wikipedia.org/wiki/Estrin%27s_scheme
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T c0, T c1) {{
-  return MulAdd(c1, x, c0);
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T c0, T c1, T c2) {{
-  return MulAdd(x2, c2, MulAdd(c1, x, c0));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T c0, T c1, T c2, T c3) {{
-  return MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T c0, T c1, T c2, T c3, T c4) {{
-  return MulAdd(x4, c4, MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T c0, T c1, T c2, T c3, T c4, T c5) {{
-  return MulAdd(x4, MulAdd(c5, x, c4),
-                MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6) {{
-  return MulAdd(x4, MulAdd(x2, c6, MulAdd(c5, x, c4)),
-                MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7) {{
-  return MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8) {{
-  return MulAdd(x8, c8,
-                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9) {{
-  return MulAdd(x8, MulAdd(c9, x, c8),
-                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9, T c10) {{
-  return MulAdd(x8, MulAdd(x2, c10, MulAdd(c9, x, c8)),
-                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9, T c10, T c11) {{
-  return MulAdd(x8, MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8)),
-                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9, T c10, T c11,
-                                     T c12) {{
-  return MulAdd(
-      x8, MulAdd(x4, c12, MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
-      MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-             MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9, T c10, T c11,
-                                     T c12, T c13) {{
-  return MulAdd(x8,
-                MulAdd(x4, MulAdd(c13, x, c12),
-                       MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
-                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9, T c10, T c11,
-                                     T c12, T c13, T c14) {{
-  return MulAdd(x8,
-                MulAdd(x4, MulAdd(x2, c14, MulAdd(c13, x, c12)),
-                       MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
-                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9, T c10, T c11,
-                                     T c12, T c13, T c14, T c15) {{
-  return MulAdd(x8,
-                MulAdd(x4, MulAdd(x2, MulAdd(c15, x, c14), MulAdd(c13, x, c12)),
-                       MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
-                MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                       MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T x16, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9, T c10, T c11,
-                                     T c12, T c13, T c14, T c15, T c16) {{
-  return MulAdd(
-      x16, c16,
-      MulAdd(x8,
-             MulAdd(x4, MulAdd(x2, MulAdd(c15, x, c14), MulAdd(c13, x, c12)),
-                    MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
-             MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                    MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T x16, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9, T c10, T c11,
-                                     T c12, T c13, T c14, T c15, T c16, T c17) {{
-  return MulAdd(
-      x16, MulAdd(c17, x, c16),
-      MulAdd(x8,
-             MulAdd(x4, MulAdd(x2, MulAdd(c15, x, c14), MulAdd(c13, x, c12)),
-                    MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
-             MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                    MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)))));
-}}
-template <class T>
-HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T x16, T c0, T c1, T c2, T c3, T c4, T c5,
-                                     T c6, T c7, T c8, T c9, T c10, T c11,
-                                     T c12, T c13, T c14, T c15, T c16, T c17,
-                                     T c18) {{
-  return MulAdd(
-      x16, MulAdd(x2, c18, MulAdd(c17, x, c16)),
-      MulAdd(x8,
-             MulAdd(x4, MulAdd(x2, MulAdd(c15, x, c14), MulAdd(c13, x, c12)),
-                    MulAdd(x2, MulAdd(c11, x, c10), MulAdd(c9, x, c8))),
-             MulAdd(x4, MulAdd(x2, MulAdd(c7, x, c6), MulAdd(c5, x, c4)),
-                    MulAdd(x2, MulAdd(c3, x, c2), MulAdd(c1, x, c0)))));
-}}
 
 //////////////////
 // Constants
@@ -941,117 +919,6 @@ HWY_INLINE HWY_MAYBE_UNUSED T Estrin(T x, T x2, T x4, T x8, T x16, T c0, T c1, T
 HWY_AFTER_NAMESPACE();
 
 #endif  // HIGHWAY_HWY_CONTRIB_SLEEF_SLEEF_INL_
-
-#if HWY_ONCE
- __attribute__((aligned(64)))
-const float PayneHanekReductionTable_float[] = {{
-    // clang-format off
-  0.159154892, 5.112411827e-08, 3.626141271e-15, -2.036222915e-22,
-  0.03415493667, 6.420638243e-09, 7.342738037e-17, 8.135951656e-24,
-  0.03415493667, 6.420638243e-09, 7.342738037e-17, 8.135951656e-24,
-  0.002904943191, -9.861969574e-11, -9.839336547e-18, -1.790215892e-24,
-  0.002904943191, -9.861969574e-11, -9.839336547e-18, -1.790215892e-24,
-  0.002904943191, -9.861969574e-11, -9.839336547e-18, -1.790215892e-24,
-  0.002904943191, -9.861969574e-11, -9.839336547e-18, -1.790215892e-24,
-  0.0009518179577, 1.342109202e-10, 1.791623576e-17, 1.518506657e-24,
-  0.0009518179577, 1.342109202e-10, 1.791623576e-17, 1.518506657e-24,
-  0.0004635368241, 1.779561221e-11, 4.038449606e-18, -1.358546052e-25,
-  0.0002193961991, 1.779561221e-11, 4.038449606e-18, -1.358546052e-25,
-  9.73258866e-05, 1.779561221e-11, 4.038449606e-18, -1.358546052e-25,
-  3.62907449e-05, 3.243700447e-12, 5.690024473e-19, 7.09405479e-26,
-  5.773168596e-06, 1.424711477e-12, 1.3532163e-19, 1.92417627e-26,
-  5.773168596e-06, 1.424711477e-12, 1.3532163e-19, 1.92417627e-26,
-  5.773168596e-06, 1.424711477e-12, 1.3532163e-19, 1.92417627e-26,
-  1.958472239e-06, 5.152167755e-13, 1.3532163e-19, 1.92417627e-26,
-  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
-  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
-  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
-  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
-  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
-  5.112411827e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
-  2.132179588e-08, 3.626141271e-15, -2.036222915e-22, 6.177847236e-30,
-  6.420638243e-09, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
-  6.420638243e-09, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
-  2.695347945e-09, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
-  8.327027956e-10, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
-  8.327027956e-10, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
-  3.670415083e-10, 7.342738037e-17, 8.135951656e-24, -1.330400526e-31,
-  1.342109202e-10, 1.791623576e-17, 1.518506361e-24, 2.613904e-31,
-  1.779561221e-11, 4.038449606e-18, -1.358545683e-25, -3.443243946e-32,
-  1.779561221e-11, 4.038449606e-18, -1.358545683e-25, -3.443243946e-32,
-  1.779561221e-11, 4.038449606e-18, -1.358545683e-25, -3.443243946e-32,
-  3.243700447e-12, 5.690024473e-19, 7.094053557e-26, 1.487136711e-32,
-  3.243700447e-12, 5.690024473e-19, 7.094053557e-26, 1.487136711e-32,
-  3.243700447e-12, 5.690024473e-19, 7.094053557e-26, 1.487136711e-32,
-  1.424711477e-12, 1.3532163e-19, 1.924175961e-26, 2.545416018e-33,
-  5.152167755e-13, 1.3532163e-19, 1.924175961e-26, 2.545416018e-33,
-  6.046956013e-14, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
-  6.046956013e-14, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
-  6.046956013e-14, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
-  3.626141271e-15, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
-  3.626141271e-15, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
-  3.626141271e-15, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
-  3.626141271e-15, -2.036222915e-22, 6.177846108e-30, 1.082084378e-36,
-  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
-  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
-  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
-  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
-  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
-  7.342738037e-17, 8.135951656e-24, -1.330400526e-31, 6.296048013e-40,
-  1.791623576e-17, 1.518506361e-24, 2.61390353e-31, 4.764937743e-38,
-  1.791623576e-17, 1.518506361e-24, 2.61390353e-31, 4.764937743e-38,
-  4.038449606e-18, -1.358545683e-25, -3.443243946e-32, 6.296048013e-40,
-  4.038449606e-18, -1.358545683e-25, -3.443243946e-32, 6.296048013e-40,
-  5.690024473e-19, 7.094053557e-26, 1.487136711e-32, 6.296048013e-40,
-  5.690024473e-19, 7.094053557e-26, 1.487136711e-32, 6.296048013e-40,
-  5.690024473e-19, 7.094053557e-26, 1.487136711e-32, 6.296048013e-40,
-  1.3532163e-19, 1.924175961e-26, 2.545415467e-33, 6.296048013e-40,
-  1.3532163e-19, 1.924175961e-26, 2.545415467e-33, 6.296048013e-40,
-  2.690143217e-20, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
-  2.690143217e-20, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
-  2.690143217e-20, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
-  1.334890502e-20, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
-  6.572641438e-21, -1.452834402e-28, -6.441077673e-36, -1.764234767e-42,
-  0.05874381959, 1.222115387e-08, 7.693612965e-16, 1.792054435e-22,
-  0.02749382704, 4.77057327e-09, 7.693612965e-16, 1.792054435e-22,
-  0.01186883077, 1.045283415e-09, 3.252721926e-16, 7.332633139e-23,
-  0.00405633077, 1.045283415e-09, 3.252721926e-16, 7.332633139e-23,
-  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
-  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
-  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
-  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
-  0.000150081818, -2.454155802e-12, 1.161414894e-20, 1.291319272e-27,
-  2.801149822e-05, 4.821800945e-12, 8.789757674e-19, 1.208447639e-25,
-  2.801149822e-05, 4.821800945e-12, 8.789757674e-19, 1.208447639e-25,
-  2.801149822e-05, 4.821800945e-12, 8.789757674e-19, 1.208447639e-25,
-  1.275271279e-05, 1.183823005e-12, 1.161414894e-20, 1.291319272e-27,
-  5.12331826e-06, 1.183823005e-12, 1.161414894e-20, 1.291319272e-27,
-  1.308621904e-06, 2.743283031e-13, 1.161414894e-20, 1.291319272e-27,
-  1.308621904e-06, 2.743283031e-13, 1.161414894e-20, 1.291319272e-27,
-  3.549478151e-07, 4.695462769e-14, 1.161414894e-20, 1.291319272e-27,
-  3.549478151e-07, 4.695462769e-14, 1.161414894e-20, 1.291319272e-27,
-  1.165292645e-07, 1.853292503e-14, 4.837885366e-21, 1.291319272e-27,
-  1.165292645e-07, 1.853292503e-14, 4.837885366e-21, 1.291319272e-27,
-  5.69246339e-08, 4.322073705e-15, 1.449754789e-21, 7.962890365e-29,
-  2.712231151e-08, 4.322073705e-15, 1.449754789e-21, 7.962890365e-29,
-  1.222115387e-08, 7.693612965e-16, 1.792054182e-22, 2.91418027e-29,
-  4.77057327e-09, 7.693612965e-16, 1.792054182e-22, 2.91418027e-29,
-  1.045283415e-09, 3.252721926e-16, 7.332632508e-23, 3.898253736e-30,
-  1.045283415e-09, 3.252721926e-16, 7.332632508e-23, 3.898253736e-30,
-  1.139611461e-10, 1.996093359e-17, 5.344349223e-25, 1.511644828e-31,
-  1.139611461e-10, 1.996093359e-17, 5.344349223e-25, 1.511644828e-31,
-  1.139611461e-10, 1.996093359e-17, 5.344349223e-25, 1.511644828e-31,
-  1.139611461e-10, 1.996093359e-17, 5.344349223e-25, 1.511644828e-31,
-  5.575349904e-11, 6.083145782e-18, 5.344349223e-25, 1.511644828e-31,
-  2.664967552e-11, -8.557475018e-19, -8.595036458e-26, -2.139883875e-32,
-  1.209775682e-11, 2.61369883e-18, 5.344349223e-25, 1.511644828e-31,
-  4.821800945e-12, 8.789757674e-19, 1.208447639e-25, 3.253064536e-33,
-  1.183823005e-12, 1.161414894e-20, 1.29131908e-27, 1.715766248e-34,
-  1.183823005e-12, 1.161414894e-20, 1.29131908e-27, 1.715766248e-34,
-  2.743283031e-13, 1.161414894e-20, 1.29131908e-27, 1.715766248e-34,
-    // clang-format on
-}};
-#endif // HWY_ONCE
 """)
 
 

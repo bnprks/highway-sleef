@@ -6,6 +6,9 @@ SLEEF_NANf	NanFloat	float	Floating point NaN
 SLEEF_DBL_MIN	DoubleMin	double	Minimum normal double value
 SLEEF_INFINITY	InfDouble	double	Double precision infinity
 SLEEF_NAN	NanDouble	double	Double precision NaN
+SLEEF_FP_ILOGB0	ILogB0	int	ilogb(0)
+SLEEF_FP_ILOGBNAN	ILogBNan	int	ilogb(nan)
+SLEEF_INT_MAX	IntMax	int	maximum 32-bit int
 
 L2L	Ln2Lo_d	double	Ln2Hi + Ln2Lo ~= ln(2)
 L2Lf	Ln2Lo_f	float	Ln2Hi + Ln2Lo ~= ln(2)
@@ -19,22 +22,38 @@ L10Lf	Log10Of2_Lo_f	float	Log10Of2_Hi_f + Log10Of2_Lo_f ~= log10(2)
 L10U	Log10Of2_Hi_d	double	Log10Of2_Hi_d + Log10Of2_Lo_d ~= log10(2)
 L10L	Log10Of2_Lo_d	double	Log10Of2_Hi_d + Log10Of2_Lo_d ~= log10(2)
 
-TRIGRANGEMAXf	TrigRangeMax	float	Max value for using 4-part sum of Pi
+TRIGRANGEMAXf	TrigRangeMaxf	float	Max value for using 4-part sum of Pi
 PI_Af	PiAf	float	Four-part sum of Pi (1/4)
 PI_Bf	PiBf	float	Four-part sum of Pi (2/4)
 PI_Cf	PiCf	float	Four-part sum of Pi (3/4)
 PI_Df	PiDf	float	Four-part sum of Pi (4/4)
+TRIGRANGEMAX	TrigRangeMax	double	Max value for using 4-part sum of Pi
+PI_A	PiA	double	Four-part sum of Pi (1/4)
+PI_B	PiB	double	Four-part sum of Pi (2/4)
+PI_C	PiC	double	Four-part sum of Pi (3/4)
+PI_D	PiD	double	Four-part sum of Pi (4/4)
 
-TRIGRANGEMAX2f	TrigRangeMax2	float	Max value for using 3-part sum of Pi
+TRIGRANGEMAX2f	TrigRangeMax2f	float	Max value for using 3-part sum of Pi
 PI_A2f	PiA2f	float	Three-part sum of Pi (1/3)
 PI_B2f	PiB2f	float	Three-part sum of Pi (2/3)
 PI_C2f	PiC2f	float	Three-part sum of Pi (3/3)
+TRIGRANGEMAX2	TrigRangeMax2	double	Max value for using 3-part sum of Pi
+PI_A2	PiA2	double	Three-part sum of Pi (1/3)
+PI_B2	PiB2	double	Three-part sum of Pi (2/3)
+PI_C2	PiC2	double	Three-part sum of Pi (3/3)
+
+TRIGRANGEMAX4f	TrigRangeMax4f	float	Cutoff value for cospi and sinpi 
+TRIGRANGEMAX3	TrigRangeMax3	double	Cutoff value for cospi and sinpi 
 
 M_PIf	Pif	float	pi (float)
 M_PI	Pi	double	pi
-M_1_PI	OneOverPi	float	1 / pi
+M_1_PI	OneOverPi	double	1 / pi
+M_2_PI	TwoOverPi	double	2 / pi
+M_2_PI_H	TwoOverPiHi	double	TwoOverPiHi + TwoOverPiLo ~= 2 / pi
+M_2_PI_L	TwoOverPiLo	double	TwoOverPiHi + TwoOverPiLo ~= 2 / pi
 
-SQRT_FLT_MAX	SqrtFloatMax	float	Square root of max floating-point number
+SQRT_FLT_MAX	SqrtFloatMax	float	Square root of max float
+SQRT_DBL_MAX	SqrtDoubleMax	double	Square root of max double
 
 Sleef_rempitabsp	PayneHanekReductionTable_float	float	Precomputed table of exponent values for Payne Hanek reduction
 Sleef_rempitabdp	PayneHanekReductionTable_double	double	Precomputed table of exponent values for Payne Hanek reduction

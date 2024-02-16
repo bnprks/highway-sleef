@@ -32,3 +32,8 @@ add_custom_command(OUTPUT "sleef-generated.h"
 )
 
 add_custom_target(highway_sleef_generated DEPENDS "sleef-generated.h")
+
+add_library(highway_sleef PayneHanekReductionTable.cc)
+target_include_directories(highway_sleef INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
+target_link_libraries(highway_sleef INTERFACE hwy)
+add_dependencies(highway_sleef highway_sleef_generated)

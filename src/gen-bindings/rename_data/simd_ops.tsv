@@ -51,6 +51,7 @@ vneg_vf_vf(x)	Neg(x)
 vabs_vd_vd(x)	Abs(x)
 vneg_vi_vi(x)	Neg(x)
 vneg_vd_vd(x)	Neg(x)
+vneg64_vm_vm(x)	Neg(x)
 
 vmax_vf_vf_vf(x, y)	Max(x, y)
 vmin_vf_vf_vf(x, y)	Min(x, y)
@@ -60,10 +61,15 @@ vmin_vd_vd_vd(x, y)	Min(x, y)
 vrint_vi2_vf(f)	NearestInt(f) # NOTE: Slower than Sleef due to FixConversionOverflow call
 vrint_vi_vd(f)	ConvertTo(di, Round(f)) # NOTE: Slower than Sleef due to FixConversionOverflow call
 vrint_vf_vf(f)	Round(f)
+vrintfk2_vf_vf(f)	Round(f)
 vrint_vd_vd(f)	Round(f)
+vrintk2_vd_vd(f)	Round(f) # This is the definition if FULL_FP_ROUNDING is defined (which seems to be most architectures)
 vrint2_vd_vd(f)	Round(f) # This is the definition if FULL_FP_ROUNDING is defined (which seems to be most architectures)
 vtruncate_vf_vf(f)	Trunc(f)
+vptrunc_vf_vf(f)	Trunc(f)
 vtruncate_vi_vd(f)	ConvertTo(di, Trunc(f))
+vtruncate_vd_vd(f)	Trunc(f)
+vptrunc_vd_vd(f)	Trunc(f) # This is the definition when FULL_FP_ROUNDING is defined
 
 # These are used only with AVX512
 vgetexp_vf_vf(f)	GetExponent(f)
@@ -90,6 +96,8 @@ vsll_vi2_vi2_i(x, c)	ShiftLeft<c>(x)
 vsra_vi2_vi2_i(x, c)	ShiftRight<c>(x)
 vsrl_vi2_vi2_i(x, c)	BitCast(di, ShiftRight<c>(BitCast(du, x))) # Convert to unsigned to get a logical shift
 vsll_vi_vi_i(x, c)	ShiftLeft<c>(x)
+# NOTE: these ShiftRight ops get a special case in translate.py to convert shifts by 31 into shifts by 63 since
+# we are switching from 32-bit ints to 64-bit ints
 vsra_vi_vi_i(x, c)	ShiftRight<c>(x)
 vsrl_vi_vi_i(x, c)	BitCast(di, ShiftRight<c>(BitCast(du, x))) # Convert to unsigned to get a logical shift
 vsrl64_vm_vm_i(x, c)	ShiftRight<c>(x)
@@ -99,9 +107,13 @@ vand_vi_vi_vi(x, y)	And(x, y)
 vand_vm_vm_vm(x, y)	And(x, y)
 
 vandnot_vi2_vi2_vi2(x, y)	AndNot(x, y)
+vandnot_vi_vi_vi(x, y)	AndNot(x, y)
+vandnot_vm_vm_vm(x, y)	AndNot(x, y)
 
 vor_vi2_vi2_vi2(x, y)	Or(x, y)
+vxor_vi2_vi2_vi2(x, y)	Xor(x, y)
 vor_vm_vm_vm(x, y)	Or(x, y)
+vxor_vi_vi_vi(x, y)	Xor(x, y)
 vxor_vm_vm_vm(x, y)	Xor(x, y)
 vgt_vi2_vi2_vi2(x, y)	VecFromMask(di, Gt(x, y))
 
@@ -117,6 +129,8 @@ vgt_vo_vf_vf(x, y)	Gt(x, y)
 vgt_vo_vi2_vi2(x, y)	RebindMask(df, Gt(x, y))
 visnegzero_vo_vf(x)	Eq(x, Set(df, -0.0))
 vlt_vo_vf_vf(x, y)	Lt(x, y)
+vle_vo_vf_vf(x, y)	Le(x, y)
+vneq_vo_vf_vf(x, y)	Ne(x, y)
 veq_vo_vi_vi(x, y)	RebindMask(df, Eq(x, y))
 veq_vo_vd_vd(x, y)	Eq(x, y)
 vge_vo_vd_vd(x, y)	Ge(x, y)
@@ -124,21 +138,36 @@ vgt_vo_vd_vd(x, y)	Gt(x, y)
 vgt_vo_vi_vi(x, y)	RebindMask(df, Gt(x, y))
 visnegzero_vo_vd(x)	Eq(x, Set(df, -0.0))
 vlt_vo_vd_vd(x, y)	Lt(x, y)
+vle_vo_vd_vd(x, y)	Le(x, y)
 vneq_vo_vd_vd(x, y)	Ne(x, y)
 veq64_vo_vm_vm(x, y) 	RebindMask(df, Eq(x, y))
+visnumber_vo_vf(x)  	IsFinite(x)
+visnumber_vo_vd(x)  	IsFinite(x)
 
+vnot_vo32_vo32(x)	Not(x)
+vnot_vo64_vo64(x)	Not(x)
 vand_vo_vo_vo(x, y)	And(x, y)
 vor_vo_vo_vo(x, y)	Or(x, y)
 vxor_vo_vo_vo(x, y)	Xor(x, y)
 vandnot_vo_vo_vo(x, y)	AndNot(x, y)
 
 vsel_vf_vo_vf_vf(m, x, y)	IfThenElse(m, x, y)
+vsel_vm_vo64_vm_vm(m, x, y)	IfThenElse(RebindMask(du, m), x, y)
+vsel_vf_vo_f_f(m, x, y)	IfThenElse(m, Set(df, x), Set(df, y))
 vsel_vi2_vo_vi2_vi2(m, x, y)	IfThenElse(RebindMask(di, m), x, y)
 vsel_vi2_vf_vf_vi2_vi2(f0, f1, x, y)	IfThenElse(RebindMask(di, Lt(f0, f1)), x, y)
 vsel_vd_vo_vd_vd(m, x, y)	IfThenElse(m, x, y)
+vsel_vd_vo_d_d(m, x, y)	IfThenElse(m, Set(df, x), Set(df, y))
 vsel_vi_vo_vi_vi(m, x, y)	IfThenElse(RebindMask(di, m), x, y)
 
+# o0 ? d0 : (o1 ? d1 : d2)
+vsel_vd_vo_vo_d_d_d(o0, o1, d0, d1, d2)	IfThenElse(o0, Set(df, d0), IfThenElse(o1, Set(df, d1), Set(df, d2)))
+
+# o0 ? d0 : (o1 ? d1 : (o2 ? d2 : d3))
+vsel_vd_vo_vo_vo_d_d_d_d(o0, o1, o2, d0, d1, d2, d3)	IfThenElse(o0, Set(df, d0), IfThenElse(o1, Set(df, d1), IfThenElse(o2, Set(df, d2), Set(df, d3))))
+
 vtestallones_i_vo32(m)	AllTrue(df, m)
+vtestallones_i_vo64(m)	AllTrue(df, m)
 
 # Combining unsigned int masks with true masks is a bit tricky
 vor_vm_vo32_vm(m, x)	IfThenElse(RebindMask(du, m), Set(du, -1), x)
@@ -147,6 +176,9 @@ vor_vm_vo64_vm(m, x)	IfThenElse(RebindMask(du, m), Set(du, -1), x)
 vandnot_vm_vo64_vm(m, y)	IfThenZeroElse(RebindMask(du, m), y)
 vand_vm_vo32_vm(m, y)	IfThenElseZero(RebindMask(du, m), y)
 vand_vi2_vo_vi2(m, y)	IfThenElseZero(RebindMask(di, m), y)
+vand_vm_vo64_vm(m, y)	IfThenElseZero(RebindMask(du, m), y)
+vand_vi_vo_vi(m, y)	IfThenElseZero(RebindMask(di, m), y)
+vandnot_vi_vo_vi(m, y)	IfThenZeroElse(RebindMask(di, m), y)
 
 ############
 # Conversions
@@ -155,6 +187,8 @@ vcast_vf_f(f)	Set(df, f)
 vcast_vd_d(f)	Set(df, f)
 vcast_vi2_i(i)	Set(di, i)
 vcast_vi_i(i)	Set(di, i)
+vcast_vm_i64(x)	Set(du, x)
+vcast_vm_u64(x)	Set(du, x)
 vcastu_vm_vi(i)	ShiftLeft<32>(BitCast(du, i))
 vcastu_vi_vm(i)	BitCast(di, ShiftRight<32>(i))
 vcast_vf_vi2(vi)	ConvertTo(df, vi)
@@ -196,6 +230,9 @@ vd2setxy_vd2_vd_vd(x, y)	Create2(df, x, y)
 figeti_vi2_di(fi)	BitCast(di, Get2<1>(fi))
 figetd_vf_di(fi)	Get2<0>(fi)
 fisetdi_fi_vf_vi2(f, i)	Create2(df, f, BitCast(df, i))
+digeti_vi_di(fi)	BitCast(di, Get2<1>(fi))
+digetd_vd_di(fi)	Get2<0>(fi)
+disetdi_di_vd_vi(f, i)	Create2(df, f, BitCast(df, i))
 
 ############
 # 2-float + int Tuples (float, float, int)
@@ -204,6 +241,21 @@ dfisetdf_dfi_dfi_vf2(f2i, f2)	Set3<0>(Set3<1>(f2i, Get2<1>(f2)), Get2<0>(f2))  #
 dfigeti_vi2_dfi(f2i)	BitCast(di, Get3<2>(f2i))                            # Get the int portion
 dfigetdf_vf2_dfi(f2i)	Create2(df, Get3<0>(f2i), Get3<1>(f2i))              # Get the 2-float portion
 dfisetdfi_dfi_vf2_vi2(f2, i)	Create3(df, Get2<0>(f2), Get2<1>(f2), BitCast(df, i)) # Set the full value
+ddisetdd_ddi_ddi_vd2(f2i, f2)	Set3<0>(Set3<1>(f2i, Get2<1>(f2)), Get2<0>(f2))  # Set the 2-float portion
+ddigeti_vi_ddi(f2i)	BitCast(di, Get3<2>(f2i))                            # Get the int portion
+ddigetdd_vd2_ddi(f2i)	Create2(df, Get3<0>(f2i), Get3<1>(f2i))              # Get the 2-float portion
+ddisetddi_ddi_vd2_vi(f2, i)	Create3(df, Get2<0>(f2), Get2<1>(f2), BitCast(df, i)) # Set the full value
+
+############
+# 4-float Tuples ((float, float), (float, float))
+############
+df2setab_df2_vf2_vf2(x, y)	Create4(df, Get2<0>(x), Get2<1>(x), Get2<0>(y), Get2<1>(y))
+df2geta_vf2_df2(x)	Create2(df, Get4<0>(x), Get4<1>(x))
+df2getb_vf2_df2(x)	Create2(df, Get4<2>(x), Get4<3>(x))
+
+dd2setab_dd2_vd2_vd2(x, y)	Create4(df, Get2<0>(x), Get2<1>(x), Get2<0>(y), Get2<1>(y))
+dd2geta_vd2_dd2(x)	Create2(df, Get4<0>(x), Get4<1>(x))
+dd2getb_vd2_dd2(x)	Create2(df, Get4<2>(x), Get4<3>(x))
 
 ############
 # Misc
@@ -211,10 +263,15 @@ dfisetdfi_dfi_vf2_vi2(f2, i)	Create3(df, Get2<0>(f2), Get2<1>(f2), BitCast(df, i
 LIKELY(x)	HWY_LIKELY(x)
 INT64_C(x)	INT64_C(x)
 vgather_vf_p_vi2(ptr, idx)	GatherIndex(df, ptr, idx)
+vgather_vd_p_vi(ptr, idx)	GatherIndex(df, ptr, idx)
 
-# Sleef's implementation of Estrin's method uses pre-computed x^2 and x^4
+# Sleef's implementation of Estrin's method uses pre-computed x^2, x^4, etc.
 POLY6(x, x2, x4, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5))
 POLY7(x, x2, x4, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6))
 POLY8(x, x2, x4, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7))
 POLY9(x, x2, x4, x8, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8))
 POLY10(x, x2, x4, x8, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8), Set(df, c9))
+POLY12(x, x2, x4, x8, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8), Set(df, c9), Set(df, c10), Set(df, c11))
+POLY16(x, x2, x4, x8, c15, c14, c13, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8), Set(df, c9), Set(df, c10), Set(df, c11), Set(df, c12), Set(df, c13), Set(df, c14), Set(df, c15))
+POLY19(x, x2, x4, x8, x16, c18, c17, c16, c15, c14, c13, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, x16, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8), Set(df, c9), Set(df, c10), Set(df, c11), Set(df, c12), Set(df, c13), Set(df, c14), Set(df, c15), Set(df, c16), Set(df, c17), Set(df, c18))
+POLY21(x, x2, x4, x8, x16, c20, c19, c18, c17, c16, c15, c14, c13, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, x16, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8), Set(df, c9), Set(df, c10), Set(df, c11), Set(df, c12), Set(df, c13), Set(df, c14), Set(df, c15), Set(df, c16), Set(df, c17), Set(df, c18), Set(df, c19), Set(df, c20))

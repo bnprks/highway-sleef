@@ -3,12 +3,17 @@ vint2	Vec<RebindToSigned<D>>	unknown
 vint	Vec<RebindToSigned<D>>	unknown
 vmask	Vec<RebindToUnsigned<D>>	unknown
 vopmask	Mask<D>	unknown
+void	void	unknown
 vfloat	Vec<D>	float
 vfloat2	Vec2<D>	float
+df2	Vec4<D>	float
+dd2	Vec4<D>	double
 vdouble	Vec<D>	double
 vdouble2	Vec2<D>	double
 fi_t	Vec2<D>	float
 dfi_t	Vec3<D>	float
+di_t	Vec2<D>	double
+ddi_t	Vec3<D>	double
 
 # Used in NEON reciprocal sqrt for some reason
 float32x4_t	Vec<D>	float

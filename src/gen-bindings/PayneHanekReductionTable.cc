@@ -6,7 +6,7 @@
 // Modified by Ben Parks in 2024 for use with the Highway library
 
  __attribute__((aligned(64)))
-const double PayneHanekReductionTable_double[] = {
+extern const double PayneHanekReductionTable_double[] = {
     // clang-format off
   0.15915494309189531785, 1.7916237278037667488e-17, 2.5454160968749269937e-33, 2.1132476107887107169e-49,
   0.03415494309189533173, 4.0384494702232122736e-18, 1.0046721413651383112e-33, 2.1132476107887107169e-49,
@@ -981,7 +981,7 @@ const double PayneHanekReductionTable_double[] = {
 };
 
  __attribute__((aligned(64)))
-const float PayneHanekReductionTable_float[] = {
+extern const float PayneHanekReductionTable_float[] = {
     // clang-format off
   0.159154892, 5.112411827e-08, 3.626141271e-15, -2.036222915e-22,
   0.03415493667, 6.420638243e-09, 7.342738037e-17, 8.135951656e-24,

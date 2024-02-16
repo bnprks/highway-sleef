@@ -29,6 +29,10 @@ defined(ENABLE_VECEXT)	0
 # Sleef has some special recipricol sqrt logic for NEON specifically, but we'll ignore that for now
 ENABLE_RECSQRT_SP	0
 
+# Help for some constant definition in misc.h
+!defined(SLEEF_GENHEADER)	0
+defined(__INTEL_COMPILER) && defined(ENABLE_PURECFMA_SCALAR)	0
+
 # Basic helpers for #if 1 and #if 0
 0	0 
 1	1 

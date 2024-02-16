@@ -3,7 +3,7 @@
 # Top-level
 ############
 
-# Single-argument exponential
+# Power, exponential, and logarithmic functions
 xexpf	Exp	Computes e^x
 xexp2f	Exp2	Computes 2^x
 xexp10f	Exp10	Computes 10^x
@@ -14,6 +14,12 @@ xlog2f	Log2	Computes log2(x) with 1.0 ULP accuracy
 xlog10f	Log10	Computes log10(x) with 1.0 ULP accuracy
 xlog1pf	Log1p	Computes log1p(x) with 1.0 ULP accuracy
 xpowf	Pow	Computes x^y with 1.0 ULP accuracy
+xsqrtf_u05	Sqrt	Computes sqrt(x) with 0.5001 ULP accuracy
+xsqrtf_u35	SqrtFast	Computes sqrt(x) with 3.5 ULP accuracy
+xcbrtf_u1	Cbrt	Computes cube root of x with 1.0 ULP accuracy
+xcbrtf	CbrtFast	Computes cube root of x with 3.5 ULP accuracy
+xhypotf_u05	Hypot	Computes sqrt(x^2 + y^2) with 0.5001 ULP accuracy
+xhypotf_u35	HypotFast	Computes sqrt(x^2 + y^2) with 3.5 ULP accuracy
 
 xexp	Exp	Computes e^x
 xexp2	Exp2	Computes 2^x
@@ -25,48 +31,114 @@ xlog2	Log2	Computes log2(x) with 1.0 ULP accuracy
 xlog10	Log10	Computes log10(x) with 1.0 ULP accuracy
 xlog1p	Log1p	Computes log1p(x) with 1.0 ULP accuracy
 xpow	Pow	Computes x^y with 1.0 ULP accuracy
-
-xsqrtf_u05	Sqrt	Computes sqrt(x) with 0.5 ULP accuracy
-xsqrtf_u35	SqrtFast	Computes sqrt(x) with 3.5 ULP accuracy
-xcbrtf_u1	Cbrt	Computes cube root of x with 1.0 ULP accuracy
-xcbrtf	CbrtFast	Computes cube root of x with 3.5 ULP accuracy
-xhypotf_u05	Hypot	Computes sqrt(x^2 + y^2) with 0.5 ULP accuracy
-xhypotf_u35	HypotFast	Computes sqrt(x^2 + y^2) with 3.5 ULP accuracy
-
-xsqrt_u05	Sqrt	Computes sqrt(x) with 0.5 ULP accuracy
+xsqrt_u05	Sqrt	Computes sqrt(x) with 0.5001 ULP accuracy
 xsqrt_u35	SqrtFast	Computes sqrt(x) with 3.5 ULP accuracy
 xcbrt_u1	Cbrt	Computes cube root of x with 1.0 ULP accuracy
 xcbrt	CbrtFast	Computes cube root of x with 3.5 ULP accuracy
-xhypot_u05	Hypot	Computes sqrt(x^2 + y^2) with 0.5 ULP accuracy
+xhypot_u05	Hypot	Computes sqrt(x^2 + y^2) with 0.5001 ULP accuracy
 xhypot_u35	HypotFast	Computes sqrt(x^2 + y^2) with 3.5 ULP accuracy
 
 expm1fk	Expm1Fast	Computes e^x - 1 faster with lower precision
+expm1k	Expm1Fast	Computes e^x - 1 faster with lower precision
 
-# Single-argument Trig
+# Trig and inverse trig functions
 xsinf_u1	Sin	Computes sin(x) with 1.0 ULP accuracy
 xcosf_u1	Cos	Computes cos(x) with 1.0 ULP accuracy
 xtanf_u1	Tan	Computes tan(x) with 1.0 ULP accuracy
 xsinf	SinFast	Computes sin(x) with 3.5 ULP accuracy
 xcosf	CosFast	Computes cos(x) with 3.5 ULP accuracy
 xtanf	TanFast	Computes tan(x) with 3.5 ULP accuracy
+xasinf_u1	Asin	Computes asin(x) with 1.0 ULP accuracy
+xacosf_u1	Acos	Computes acos(x) with 1.0 ULP accuracy
+xatanf_u1	Atan	Computes atan(x) with 1.0 ULP accuracy
+xacosf	AcosFast	Computes acos(x) with 3.5 ULP accuracy
+xasinf	AsinFast	Computes asin(x) with 3.5 ULP accuracy
+xatanf	AtanFast	Computes atan(x) with 3.5 ULP accuracy
+xatan2f_u1	Atan2	Computes atan(y/x) with 1.0 ULP accuracy
+xatan2f	Atan2Fast	Computes atan(y/x) with 3.5 ULP accuracy
+XSINCOSF_U1	SinCos	Computes sin(x) and cos(x) with 1.0 ULP accuracy
+XSINCOSF	SinCosFast	Computes sin(x) and cos(x) with 3.5 ULP accuracy
+XSINCOSPIF_U05	SinCosPi	Computes sin(x*pi) and cos(x*pi) with max(0.506 ULP, FLT_MIN) accuracy (in practice staying below 2 ULP even for subnormals)
+XSINCOSPIF_U35	SinCosPiFast	Computes sin(x*pi) and cos(x*pi) with 3.5 ULP accuracy
+xsinpif_u05	SinPi	Computes sin(x*pi) with max(0.506 ULP, FLT_MIN) accuracy (in practice staying below 2 ULP even for subnormals)
+xcospif_u05	CosPi	Computes cos(x*pi) with max(0.506 ULP, FLT_MIN) accuracy (in practice staying below 2 ULP even for subnormals)
 
+xsin_u1	Sin	Computes sin(x) with 1.0 ULP accuracy
+xcos_u1	Cos	Computes cos(x) with 1.0 ULP accuracy
+xtan_u1	Tan	Computes tan(x) with 1.0 ULP accuracy
+xsin	SinFast	Computes sin(x) with 3.5 ULP accuracy
+xcos	CosFast	Computes cos(x) with 3.5 ULP accuracy
+xtan	TanFast	Computes tan(x) with 3.5 ULP accuracy
+xacos_u1	Acos	Computes acos(x) with 1.0 ULP accuracy
+xasin_u1	Asin	Computes asin(x) with 1.0 ULP accuracy
+xatan_u1	Atan	Computes atan(x) with 1.0 ULP accuracy
+xacos	AcosFast	Computes acos(x) with 3.5 ULP accuracy
+xasin	AsinFast	Computes asin(x) with 3.5 ULP accuracy
+xatan	AtanFast	Computes atan(x) with 3.5 ULP accuracy
+xatan2_u1	Atan2	Computes atan(y/x) with 1.0 ULP accuracy
+xatan2	Atan2Fast	Computes atan(y/x) with 3.5 ULP accuracy
+XSINCOS_U1	SinCos	Computes sin(x) and cos(x) with 1.0 ULP accuracy
+XSINCOS	SinCosFast	Computes sin(x) and cos(x) with 3.5 ULP accuracy
+XSINCOSPI_U05	SinCosPi	Computes sin(x*pi) and cos(x*pi) with max(0.506 ULP, FLT_MIN) accuracy (in practice staying below 2 ULP even for subnormals)
+XSINCOSPI_U35	SinCosPiFast	Computes sin(x*pi) and cos(x*pi) with 3.5 ULP accuracy
+xsinpi_u05	SinPi	Computes sin(x*pi) with max(0.506 ULP, DBL_MIN) accuracy (in practice staying below 2 ULP even for subnormals)
+xcospi_u05	CosPi	Computes cos(x*pi) with max(0.506 ULP, DBL_MIN) accuracy (in practice staying below 2 ULP even for subnormals)
+
+# Hyperbolic and inverse hyperbolic functions
 xsinhf	Sinh	Computes sinh(x) with 1.0 ULP accuracy
 xcoshf	Cosh	Computes cosh(x) with 1.0 ULP accuracy
 xtanhf	Tanh	Computes tanh(x) with 1.0 ULP accuracy
 xsinhf_u35	SinhFast	Computes sinh(x) with 3.5 ULP accuracy
 xcoshf_u35	CoshFast	Computes cosh(x) with 3.5 ULP accuracy
 xtanhf_u35	TanhFast	Computes tanh(x) with 3.5 ULP accuracy
-
-xacosf_u1	Acos	Computes acos(x) with 1.0 ULP accuracy
-xasinf_u1	Asin	Computes asin(x) with 1.0 ULP accuracy
-xatanf_u1	Atan	Computes atan(x) with 1.0 ULP accuracy
-xacosf	AcosFast	Computes acos(x) with 3.5 ULP accuracy
-xasinf	AsinFast	Computes asin(x) with 3.5 ULP accuracy
-xatanf	AtanFast	Computes atan(x) with 3.5 ULP accuracy
-
 xasinhf	Asinh	Computes asinh(x) with 1 ULP accuracy
 xacoshf	Acosh	Computes acosh(x) with 1 ULP accuracy
 xatanhf	Atanh	Computes atanh(x) with 1 ULP accuracy
+
+xsinh	Sinh	Computes sinh(x) with 1.0 ULP accuracy
+xcosh	Cosh	Computes cosh(x) with 1.0 ULP accuracy
+xtanh	Tanh	Computes tanh(x) with 1.0 ULP accuracy
+xsinh_u35	SinhFast	Computes sinh(x) with 3.5 ULP accuracy
+xcosh_u35	CoshFast	Computes cosh(x) with 3.5 ULP accuracy
+xtanh_u35	TanhFast	Computes tanh(x) with 3.5 ULP accuracy
+xasinh	Asinh	Computes asinh(x) with 1 ULP accuracy
+xacosh	Acosh	Computes acosh(x) with 1 ULP accuracy
+xatanh	Atanh	Computes atanh(x) with 1 ULP accuracy
+
+# Error and gamma functions
+xerff_u1	Erf	Computes erf(x) with 1.0 ULP accuracy
+xerfcf_u15	Erfc	Computes 1 - erf(x) with 1.5 ULP accuracy
+xtgammaf_u1	Gamma	Computes gamma(x) with 1.0 ULP accuracy
+xlgammaf_u1	LogGamma	Computes log(gamma(x)) with 1.0 ULP accuracy
+
+xerf_u1	Erf	Computes erf(x) with 1.0 ULP accuracy
+xerfc_u15	Erfc	Computes 1 - erf(x) with 1.5 ULP accuracy
+xtgamma_u1	Gamma	Computes gamma(x) with 1.0 ULP accuracy
+xlgamma_u1	LogGamma	Computes log(gamma(x)) with 1.0 ULP accuracy
+
+# Miscellaneous functions
+xfmodf	Fmod	Computes fmod(x), the floating point remainder
+xremainderf	Remainder	Computes remainder(x), the signed floating point remainder
+xldexpf	LdExp	Computes x * 2^exp
+xfrfrexpf	FrFrexp	Decomposes x into 2^exp * fr where abs(fr) is in [0.5, 1), returning fr
+xexpfrexpf	ExpFrexp	Decomposes x into 2^exp * fr where abs(fr) is in [0.5, 1), returning exp
+xilogbf	ILogB	Computes the unbiased exponent of x
+XMODFF	Modf	Decompose x into an integer and fractional part
+xnextafterf	NextAfter	Returns the next representable value after x in the direction of y
+
+xfmod	Fmod	Computes fmod(x), the floating point remainder
+xremainder	Remainder	Computes remainder(x), the signed floating point remainder
+xldexp	LdExp	Computes x * 2^exp
+xfrfrexp	FrFrexp	Decomposes x into 2^exp * fr where abs(fr) is in [0.5, 1), returning fr
+xexpfrexp	ExpFrexp	Decomposes x into 2^exp * fr where abs(fr) is in [0.5, 1), returning exp
+xilogb	ILogB	Computes the unbiased exponent of x
+XMODF	Modf	Decompose x into an integer and fractional part
+xnextafter	NextAfter	Returns the next representable value after x in the direction of y
+
+# Extra fast, extra low precision functions
+xfastsinf_u3500	SinFaster	Computes sin(pi) very quickly in range [-30, 30] with max(2e-6, 350 ULP) accuracy. Falls back to SinFast out of range.
+xfastcosf_u3500	CosFaster	Computes cos(pi) very quickly in range [-30, 30] with max(2e-6, 350 ULP) accuracy. Falls back to CosFast out of range.
+xfastpowf_u3500	PowFaster	Computes x^y very quickly with 350 ULP accuracy
 
 ############
 # Misc
@@ -74,13 +146,13 @@ xatanhf	Atanh	Computes atanh(x) with 1 ULP accuracy
 vldexp_vf_vf_vi2	LoadExp	Sets the exponent of 'x' to 2^e
 vldexp2_vf_vf_vi2	LoadExp2	Sets the exponent of 'x' to 2^e. Fast, but "short reach"
 vldexp3_vf_vf_vi2	LoadExp3	Sets the exponent of 'x' to 2^e. Very fast, "no denormal"
-vilogbk_vi2_vf	ILogB	Integer log of x
+vilogbk_vi2_vf	ILogB1	Integer log of x (helper, not top-level)
 vilogb2k_vi2_vf	ILogB2	Integer log of x, "but the argument must be a normalized value"
 vpow2i_vf_vi2	Pow2I	Computes 2^x, where x is an integer.
 vldexp_vd_vd_vi	LoadExp	Sets the exponent of 'x' to 2^e
 vldexp2_vd_vd_vi	LoadExp2	Sets the exponent of 'x' to 2^e. Fast, but "short reach"
 vldexp3_vd_vd_vi	LoadExp3	Sets the exponent of 'x' to 2^e. Very fast, "no denormal"
-vilogbk_vi_vd	ILogB	Integer log of x
+vilogbk_vi_vd	ILogB1	Integer log of x (helper, not top-level)
 vilogb2k_vi_vd	ILogB2	Integer log of x, "but the argument must be a normalized value"
 vpow2i_vd_vi	Pow2I	Computes 2^x, where x is an integer.
 
@@ -99,26 +171,44 @@ vadd_vd_8vd	Add8	Add ((((((v0 + 1) + v2) + v3) + v4) + v5) + v6) + v7
 vsub_vd_3vd	Sub3	Sub (v0 - 1) - v2
 vsub_vd_4vd	Sub4	Sub ((v0 - 1) - v2) - v3
 vsub_vd_5vd	Sub5	Sub (((v0 - 1) - v2) - v3) - v4
+vsub_vd_6vd	Sub6	Sub ((((v0 - 1) - v2) - v3) - v4) - v5
 
+vsel_vf_vo_vo_f_f_f	IfThenElse3	o0 ? d0 : (o1 ? d1 : d2)
+vsel_vf_vo_vo_vo_f_f_f_f	IfThenElse4	o0 ? d0 : (o1 ? d1 : (o2 ? d2 : d3))
 
 vsignbit_vo_vf	SignBitMask	Create a mask of which is true if x's sign bit is set
 vsignbit_vm_vf	SignBit	Extract the sign bit of x into an unsigned integer
 vsel_vi2_vf_vi2	SignBitOrZero	Zero out x when the sign bit of d is not set
 vorsign_vf_vf_vf	OrSignBit	Bitwise or of x with sign bit of y
 vmulsign_vf_vf_vf	MulSignBit	Calculate x * sign(y) with only bitwise logic
+vcopysign_vf_vf_vf	CopySign	Copy sign of y into x
 vsignbit_vo_vd	SignBitMask	Create a mask of which is true if x's sign bit is set
 vsignbit_vm_vd	SignBit	Extract the sign bit of x into an unsigned integer
 vsel_vi2_vd_vi	SignBitOrZero	Zero out x when the sign bit of d is not set
 vorsign_vd_vd_vd	OrSignBit	Bitwise or of x with sign bit of y
 vmulsign_vd_vd_vd	MulSignBit	Calculate x * sign(y) with only bitwise logic
-
+vcopysign_vd_vd_vd	CopySign	Copy sign of y into x
 rempif	PayneHanekReduction	Calculate Payne Hanek reduction. This appears to return ((2*x/pi) - round(2*x/pi)) * pi / 2 and the integer quadrant of x in range -2 to 2 (0 is [-pi/4, pi/4], 2/-2 are from [3pi/4, 5pi/4] with the sign flip a little after pi).
 rempisubf	PayneHanekReductionHelper	Helper for Payne Hanek reduction.
+rempi	PayneHanekReduction	Calculate Payne Hanek reduction. This appears to return ((2*x/pi) - round(2*x/pi)) * pi / 2 and the integer quadrant of x in range -2 to 2 (0 is [-pi/4, pi/4], 2/-2 are from [3pi/4, 5pi/4] with the sign flip a little after pi).
+rempisub	PayneHanekReductionHelper	Helper for Payne Hanek reduction.
 
+
+visinf2_vf_vf_vf	IfInfThenElseZero	If d == inf, return m, if d == -inf, return -abs(m), otherwise return m
+visinf2_vd_vd_vd	IfInfThenElseZero	If d == inf, return m, if d == -inf, return -abs(m), otherwise return m
+vsel_vi_vd_vd_vi_vi	IfLtThenElseZero	d0 < d1 ? x : y
+vsel_vi_vd_vi	IfNegThenElseZero	d0 < 0 ? x : y
+vtoward0_vf_vf	Toward0	Take the next floating point number towards 0
+vtoward0_vd_vd	Toward0	Take the next floating point number towards 0
+visint_vo_vf	IsInt	True if d is an integer
 visint_vo_vd	IsInt	True if d is an integer
 visodd_vo_vd	IsOdd	True if d is an odd (assuming d is an integer)
 vrecsqrt_vf_vf	ReciprocalSqrt	Calculate reciprocal square root on ARM NEON platforms
 
+atan2kf	Atan2Helper	Calculate Atan2 without handling special cases
+atan2k	Atan2Helper	Calculate Atan2 without handling special cases
+logk3f	LogFast	Calculate log(x) (presumably a faster, low-precision variant used in PowFaster)
+expk3f	ExpFast	Calculate exp(x) (presumably a faster, low-precision variant used in PowFaster)
 
 ############
 # Double double arithmetic
@@ -128,10 +218,16 @@ expk2f	ExpDF	Computes e^x in double-float precision
 expkf	ExpDF_float	Computes e^x in double-float precision
 logkf	LogDF	Computes ln(x) in double-float precision (version 1)
 logk2f	LogFastDF	Computes ln(x) in double-float precision (version 2)
+cospifk	CosPiDF	Computes cos(x*pi) in double-float precision
+gammafk	GammaQF	Computes gamma(x) in quad-float precision
+gammak	GammaQD	Computes gamma(x) in quad-double precision
 expk2	ExpDD	Computes e^x in double-double precision
 expk	ExpDD_double	Computes e^x in double-double precision
 logk	LogDD	Computes ln(x) in double-double precision (version 1)
 logk2	LogFastDD	Computes ln(x) in double-double precision (version 2)
+sinpifk	SinPiDF	Calculate SinPi without handling special cases in double-float precision
+sinpik	SinPiDD	Calculate SinPi without handling special cases in double-double precision
+cospik	CosPiDD	Calculate CosPi without handling special cases in double-double precision
 
 dfadd2_vf2_vf2_vf2	AddDF	Computes x + y in double-float precision
 dfadd2_vf2_vf2_vf	AddDF	Computes x + y in double-float precision
@@ -153,6 +249,8 @@ ddadd_vd2_vd_vd	AddFastDD	Computes x + y in double-double precision, sped up by 
 
 dfsub_vf2_vf2_vf2	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
 dfsub_vf2_vf2_vf	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
+ddsub_vd2_vd2_vd2	SubDD	Computes x - y in double-double precision, assuming |x| > |y|
+ddsub_vd2_vd2_vd	SubDD	Computes x - y in double-double precision, assuming |x| > |y|
 
 dfrec_vf2_vf2	RecDF	Computes 1/x in double-float precision
 dfrec_vf2_vf	RecDF	Computes 1/x in double-float precision
@@ -160,29 +258,48 @@ ddrec_vd2_vd2	RecDD	Computes 1/x in double-double precision
 ddrec_vd2_vd	RecDD	Computes 1/x in double-double precision
 
 dfneg_vf2_vf2	NegDF	Computes -x in double-float precision
+ddneg_vd2_vd2	NegDD	Computes -x in double-double precision
 
 dfscale_vf2_vf2_vf	ScaleDF	Computes x * y in double-float precision
 dfmul_vf2_vf2_vf	MulDF	Computes x * y in double-float precision
 dfmul_vf2_vf2_vf2	MulDF	Computes x * y in double-float precision
 dfmul_vf2_vf_vf	MulDF	Computes x * y in double-float precision
-dfmul_vf_vf2_vf2	MulDF_float	Computes x * y in double-float precision, returning result as single-precision
+dfmul_vf_vf2_vf2	MulDF_float	Computes x * y in double-float precision, returning result as float
+dfmla_vf2_vf_vf2_vf2	MulAddDF	Computes x * y + z in double-float precision
 ddscale_vd2_vd2_vd	ScaleDD	Computes x * y in double-double precision
 ddmul_vd2_vd2_vd	MulDD	Computes x * y in double-double precision
 ddmul_vd2_vd2_vd2	MulDD	Computes x * y in double-double precision
 ddmul_vd2_vd_vd	MulDD	Computes x * y in double-double precision
-ddmul_vd_vd2_vd2	MulDD_double	Computes x * y in double-double precision, returning result as single-precision
+ddmul_vd_vd2_vd2	MulDD_double	Computes x * y in double-double precision, returning result as double
+ddmla_vd2_vd_vd2_vd2	MulAddDD	Computes x * y + z in double-float precision
 
 dfdiv_vf2_vf2_vf2	DivDF	Computes x / y in double-float precision
 dddiv_vd2_vd2_vd2	DivDD	Computes x / y in double-double precision
 
+dfabs_vf2_vf2	AbsDF	Computes abs(x) in double-float precision
+ddabs_vd2_vd2	AbsDD	Computes abs(x) in double-double precision
+poly2df	Poly2DF	Computes 2nd-order polynomial in double-float precision
+poly2df_b	Poly2DF	Computes 2nd-order polynomial in double-float precision
+poly4df	Poly4DF	Computes 4th-order polynomial in double-float precision
+poly2dd	Poly2DD	Computes 2nd-order polynomial in double-float precision
+poly2dd_b	Poly2DD	Computes 2nd-order polynomial in double-float precision
+poly4dd	Poly4DD	Computes 4th-order polynomial in double-double precision
+
 dfsqu_vf2_vf2	SquareDF	Computes x^2 in double-float precision
+dfsqu_vf_vf2	SquareDF_float	Computes x^2 in double-float precision, returning result as float
 dfsqrt_vf2_vf	SqrtDF	Computes sqrt(x) in double-float precision
 dfsqrt_vf2_vf2	SqrtDF	Computes sqrt(x) in double-float precision
 ddsqu_vd2_vd2	SquareDD	Computes x^2 in double-double precision
+ddsqu_vd_vd2	SquareDD_double	Computes x^2 in double-double precision, returning result as double
 ddsqrt_vd2_vd	SqrtDD	Computes sqrt(x) in double-double precision
 ddsqrt_vd2_vd2	SqrtDD	Computes sqrt(x) in double-double precision
 
+vcast_vf2_d	CastDF	Cast double into double-float precision
+
 vsel_vf2_vo_vf2_vf2	IfThenElse	Specialization of IfThenElse to double-float operands
+vsel_vf2_vo_f_f_f_f	IfThenElse	o ? (x1, y1) : (x0, y0)
+vsel_vd2_vo_d_d_d_d	IfThenElse	o ? (x1, y1) : (x0, y0)
+vsel_vf2_vo_vo_vo_d_d_d_d	IfThenElse4	o0 ? d0 : (o1 ? d1 : (o2 ? d2 : d3))
 vupper_vf_vf	LowerPrecision	Set the bottom half of mantissa bits to 0 (used in some double-float math)
 dfnormalize_vf2_vf2	NormalizeDF	Normalizes a double-float precision representation (redistributes hi vs. lo value)
 atan2kf_u1	ATan2DF	atan2(x, y) in double-float precision
