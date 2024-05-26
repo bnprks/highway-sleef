@@ -103,7 +103,19 @@ def main():
         "xtan",
         "xsinh",
         "xcosh",
-        "xtanh"
+        "xtanh",
+        "xsinh_u35",
+        "xcosh_u35",
+        "xtanh_u35",
+        "xacos_u1",
+        "xasin_u1",
+        "xasinh",
+        "xacos",
+        "xasin",
+        "xatan",
+        "xacosh",
+        "xatan_u1",
+        "xatanh",
     ]
 
     # Read data files to register translations for simd ops, intermediate functions, and types

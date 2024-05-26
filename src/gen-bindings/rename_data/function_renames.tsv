@@ -134,7 +134,7 @@ vorsign_vf_vf_vf	OrSignBit	Bitwise or of x with sign bit of y
 vmulsign_vf_vf_vf	MulSignBit	Calculate x * sign(y) with only bitwise logic
 vsignbit_vo_vd	SignBitMask	Create a mask of which is true if x's sign bit is set
 vsignbit_vm_vd	SignBit	Extract the sign bit of x into an unsigned integer
-vsel_vi2_vd_vi	SignBitOrZero	Zero out x when the sign bit of d is not set
+vsel_vi_vd_vi	SignBitOrZero	Zero out x when the sign bit of d is not set
 vorsign_vd_vd_vd	OrSignBit	Bitwise or of x with sign bit of y
 vmulsign_vd_vd_vd	MulSignBit	Calculate x * sign(y) with only bitwise logic
 
@@ -184,6 +184,7 @@ ddadd_vd2_vd_vd	AddFastDD	Computes x + y in double-double precision, sped up by 
 dfsub_vf2_vf2_vf2	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
 dfsub_vf2_vf2_vf	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
 ddsub_vd2_vd2_vd2	SubDD	Computes x - y in double-double precision, assuming |x| > |y|
+ddsub_vd2_vd2_vd	SubDD	Computes x - y in double-double precision, assuming |x| > |y|
 
 dfrec_vf2_vf2	RecDF	Computes 1/x in double-float precision
 dfrec_vf2_vf	RecDF	Computes 1/x in double-float precision
@@ -215,6 +216,7 @@ ddsqrt_vd2_vd	SqrtDD	Computes sqrt(x) in double-double precision
 ddsqrt_vd2_vd2	SqrtDD	Computes sqrt(x) in double-double precision
 
 vsel_vf2_vo_vf2_vf2	IfThenElse	Specialization of IfThenElse to double-float operands
+vsel_vi_vd_vd_vi_vi	LessThanSelect	return d0 < d1 ? x : y
 vupper_vf_vf	LowerPrecision	Set the bottom half of mantissa bits to 0 (used in some double-float math)
 dfnormalize_vf2_vf2	NormalizeDF	Normalizes a double-float precision representation (redistributes hi vs. lo value)
 atan2kf_u1	ATan2DF	atan2(x, y) in double-float precision

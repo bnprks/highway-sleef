@@ -48,6 +48,7 @@ M_2_PI_H	TwoOverPiH	double	Two-part sum of 2 / pi (1/2)
 M_2_PI_L	TwoOverPiL	double	Two-part sum of 2 / pi (2/2)
 
 SQRT_FLT_MAX	SqrtFloatMax	float	Square root of max floating-point number
+SQRT_DBL_MAX	SqrtDoubleMax	double	Square root of max DP floating-point number
 
 Sleef_rempitabsp	PayneHanekReductionTable_float	float	Precomputed table of exponent values for Payne Hanek reduction
 Sleef_rempitabdp	PayneHanekReductionTable_double	double	Precomputed table of exponent values for Payne Hanek reduction

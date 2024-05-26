@@ -144,7 +144,7 @@ void FindMismatches(const char *name,
   FindMismatches<float>(#OP "f", hwy::OP##Translated, hwy::OP##Sleef)
 
 #define FIND_MISMATCHES_HELPER_DOUBLE(OP) \
-  FindMismatches<float>(#OP "d", hwy::OP##Translated, hwy::OP##Sleef)
+  FindMismatches<double>(#OP "d", hwy::OP##Translated, hwy::OP##Sleef)
 
 int main() {
   FIND_MISMATCHES_HELPER_SINGLE(Exp);
