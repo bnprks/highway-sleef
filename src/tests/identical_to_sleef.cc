@@ -35,7 +35,7 @@
 #include "hwy/tests/test_util.h"
 // clang-format on
 
-template <typename real>
+template <typename real, typename integer>
 void FindMismatches(const char *name,
                     void (*sleef_fun)(const real *, size_t,
                                       real *__restrict__),
@@ -48,8 +48,8 @@ void FindMismatches(const char *name,
   constexpr size_t CHUNK_SIZE = 1 << 10;  // Size of memory per chunk
 
   struct mismatch {
-    uint32_t input, sleef_out, translate_out;
-    uint32_t mismatch_type =
+    integer input, sleef_out, translate_out;
+    integer mismatch_type =
         0;  // 0 = no mismatch, 1 = nan mismatch, 2 = value mismatch
     char _cache_line_padding[64];
   };
@@ -70,30 +70,30 @@ void FindMismatches(const char *name,
     for (size_t i = task * TASK_SIZE; i < (task + 1) * TASK_SIZE;
          i += CHUNK_SIZE) {
       for (size_t j = 0; j < CHUNK_SIZE; j++) {
-        input[j] = hwy::BitCastScalar<real>(static_cast<uint32_t>(i + j));
+        input[j] = hwy::BitCastScalar<real>(static_cast<integer>(i + j));
       }
       sleef_fun(input.get(), CHUNK_SIZE, out1.get());
       translate_fun(input.get(), CHUNK_SIZE, out2.get());
       for (size_t j = 0; j < CHUNK_SIZE; j++) {
-        if (hwy::BitCastScalar<uint32_t>(out1[j]) !=
-            hwy::BitCastScalar<uint32_t>(out2[j])) {
+        if (hwy::BitCastScalar<integer>(out1[j]) !=
+            hwy::BitCastScalar<integer>(out2[j])) {
           if (std::isnan(out1[j]) && std::isnan(out2[j])) {
             if (!mismatched_nan) {
               mismatches[thread].mismatch_type = 1;
-              mismatches[thread].input = hwy::BitCastScalar<uint32_t>(input[j]);
+              mismatches[thread].input = hwy::BitCastScalar<integer>(input[j]);
               mismatches[thread].sleef_out =
-                  hwy::BitCastScalar<uint32_t>(out1[j]);
+                  hwy::BitCastScalar<integer>(out1[j]);
               mismatches[thread].translate_out =
-                  hwy::BitCastScalar<uint32_t>(out2[j]);
+                  hwy::BitCastScalar<integer>(out2[j]);
             }
             mismatched_nan = true;
           } else {
             mismatches[thread].mismatch_type = 2;
-            mismatches[thread].input = hwy::BitCastScalar<uint32_t>(input[j]);
+            mismatches[thread].input = hwy::BitCastScalar<integer>(input[j]);
             mismatches[thread].sleef_out =
-                hwy::BitCastScalar<uint32_t>(out1[j]);
+                hwy::BitCastScalar<integer>(out1[j]);
             mismatches[thread].translate_out =
-                hwy::BitCastScalar<uint32_t>(out2[j]);
+                hwy::BitCastScalar<integer>(out2[j]);
             quit_early = true;
             return;
           }
@@ -141,10 +141,10 @@ void FindMismatches(const char *name,
 
 
 #define FIND_MISMATCHES_HELPER_SINGLE(OP) \
-  FindMismatches<float>(#OP "f", hwy::OP##Translated, hwy::OP##Sleef)
+  FindMismatches<float, uint32_t>(#OP "f", hwy::OP##f##Translated, hwy::OP##f##Sleef)
 
 #define FIND_MISMATCHES_HELPER_DOUBLE(OP) \
-  FindMismatches<double>(#OP "d", hwy::OP##Translated, hwy::OP##Sleef)
+  FindMismatches<double, uint64_t>(#OP "d", hwy::OP##d##Translated, hwy::OP##d##Sleef)
 
 int main() {
   FIND_MISMATCHES_HELPER_SINGLE(Exp);
@@ -158,6 +158,7 @@ int main() {
   FIND_MISMATCHES_HELPER_DOUBLE(Log);
   FIND_MISMATCHES_HELPER_DOUBLE(Log1p);
   FIND_MISMATCHES_HELPER_DOUBLE(Log2);
+
 
   FIND_MISMATCHES_HELPER_SINGLE(Sin);
   FIND_MISMATCHES_HELPER_SINGLE(Cos);
@@ -198,5 +199,6 @@ int main() {
   FIND_MISMATCHES_HELPER_SINGLE(Asinh);
   FIND_MISMATCHES_HELPER_SINGLE(Acosh);
   FIND_MISMATCHES_HELPER_SINGLE(Atanh);
+
 }
 #endif

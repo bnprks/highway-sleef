@@ -151,7 +151,7 @@ vandnot_vm_vo64_vm(m, y)	IfThenZeroElse(RebindMask(du, m), y)
 vand_vm_vo32_vm(m, y)	IfThenElseZero(RebindMask(du, m), y)
 vand_vm_vo64_vm(m, y)	IfThenElseZero(RebindMask(du, m), y)
 vand_vi2_vo_vi2(m, y)	IfThenElseZero(RebindMask(di, m), y)
-vand_vi_vo_vi(m, y)	IfThenElseZero(m, y)
+vand_vi_vo_vi(m, y)	IfThenElseZero(RebindMask(di, m), y)
 
 ############
 # Conversions
@@ -235,3 +235,4 @@ POLY9(x, x2, x4, x8, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, S
 POLY10(x, x2, x4, x8, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8), Set(df, c9))
 POLY12(x, x2, x4, x8, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8), Set(df, c9), Set(df, c10), Set(df, c11))
 POLY16(x, x2, x4, x8, c15, c14, c13, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8), Set(df, c9), Set(df, c10), Set(df, c11), Set(df, c12), Set(df, c13), Set(df, c14), Set(df, c15))
+POLY19(x, x2, x4, x8, x16, c18, c17, c16, c15, c14, c13, c12, c11, c10, c9, c8, c7, c6, c5, c4, c3, c2, c1, c0)	Estrin(x, x2, x4, x8, x16, Set(df, c0), Set(df, c1), Set(df, c2), Set(df, c3), Set(df, c4), Set(df, c5), Set(df, c6), Set(df, c7), Set(df, c8), Set(df, c9), Set(df, c10), Set(df, c11), Set(df, c12), Set(df, c13), Set(df, c14), Set(df, c15), Set(df, c16), Set(df, c17), Set(df, c18))

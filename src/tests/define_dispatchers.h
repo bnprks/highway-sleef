@@ -98,38 +98,38 @@
 
 // Define dispatch names based on common naming expectations for operations
 #define DISPATCH_ALL_F(OP, SLEEF_NAME)               \
-  DISPATCH_AND_WRAP_OP1F(OP##Hwy, OP)               \
-  DISPATCH_AND_WRAP_OP1F(OP##Translated, sleef::OP) \
-  SLEEF_TO_HWY_F8(OP##Sleef, SLEEF_NAME)           \
-  DISPATCH_AND_WRAP_OP1F(OP##Sleef, OP##Sleef)
+  DISPATCH_AND_WRAP_OP1F(OP##f##Hwy, OP)               \
+  DISPATCH_AND_WRAP_OP1F(OP##f##Translated, sleef::OP) \
+  SLEEF_TO_HWY_F8(OP##f##Sleef, SLEEF_NAME)           \
+  DISPATCH_AND_WRAP_OP1F(OP##f##Sleef, OP##f##Sleef)
 
 #define DISPATCH_ALL_D(OP, SLEEF_NAME)               \
-  DISPATCH_AND_WRAP_OP1D(OP##Hwy, OP)               \
-  DISPATCH_AND_WRAP_OP1D(OP##Translated, sleef::OP) \
-  SLEEF_TO_HWY_D4(OP##Sleef, SLEEF_NAME)           \
-  DISPATCH_AND_WRAP_OP1D(OP##Sleef, OP##Sleef)
+  DISPATCH_AND_WRAP_OP1D(OP##d##Hwy, OP)               \
+  DISPATCH_AND_WRAP_OP1D(OP##d##Translated, sleef::OP) \
+  SLEEF_TO_HWY_D4(OP##d##Sleef, SLEEF_NAME)           \
+  DISPATCH_AND_WRAP_OP1D(OP##d##Sleef, OP##d##Sleef)
 
 #define DISPATCH_ALL_SKIP_HWY_F(OP, SLEEF_NAME) \
-  DISPATCH_AND_WRAP_OP1F(OP##Translated, sleef::OP) \
-  SLEEF_TO_HWY_F8(OP##Sleef, SLEEF_NAME)           \
-  DISPATCH_AND_WRAP_OP1F(OP##Sleef, OP##Sleef)
+  DISPATCH_AND_WRAP_OP1F(OP##f##Translated, sleef::OP) \
+  SLEEF_TO_HWY_F8(OP##f##Sleef, SLEEF_NAME)           \
+  DISPATCH_AND_WRAP_OP1F(OP##f##Sleef, OP##f##Sleef)
 
 #define DISPATCH_ALL_SKIP_HWY_D(OP, SLEEF_NAME) \
-  DISPATCH_AND_WRAP_OP1D(OP##Translated, sleef::OP) \
-  SLEEF_TO_HWY_D4(OP##Sleef, SLEEF_NAME)           \
-  DISPATCH_AND_WRAP_OP1D(OP##Sleef, OP##Sleef)
+  DISPATCH_AND_WRAP_OP1D(OP##d##Translated, sleef::OP) \
+  SLEEF_TO_HWY_D4(OP##d##Sleef, SLEEF_NAME)           \
+  DISPATCH_AND_WRAP_OP1D(OP##d##Sleef, OP##d##Sleef)
 
 // Define dispatch names for low-precision variants which also have a high
 // precision variant
 #define DISPATCH_ALL_LOW_PRECISION_F(OP, SLEEF_NAME)           \
-  DISPATCH_AND_WRAP_OP1F(OP##FastTranslated, sleef::OP##Fast) \
-  SLEEF_TO_HWY_F8(OP##FastSleef, SLEEF_NAME)                 \
-  DISPATCH_AND_WRAP_OP1F(OP##FastSleef, OP##FastSleef)
+  DISPATCH_AND_WRAP_OP1F(OP##Fast##f##Translated, sleef::OP##Fast) \
+  SLEEF_TO_HWY_F8(OP##Fast##f##Sleef, SLEEF_NAME)                 \
+  DISPATCH_AND_WRAP_OP1F(OP##Fast##f##Sleef, OP##Fast##f##Sleef)
 
 #define DISPATCH_ALL_LOW_PRECISION_D(OP, SLEEF_NAME)           \
-  DISPATCH_AND_WRAP_OP1D(OP##FastTranslated, sleef::OP##Fast) \
-  SLEEF_TO_HWY_D4(OP##FastSleef, SLEEF_NAME)                 \
-  DISPATCH_AND_WRAP_OP1D(OP##FastSleef, OP##FastSleef)
+  DISPATCH_AND_WRAP_OP1D(OP##Fast##d##Translated, sleef::OP##Fast) \
+  SLEEF_TO_HWY_D4(OP##Fast##d##Sleef, SLEEF_NAME)                 \
+  DISPATCH_AND_WRAP_OP1D(OP##Fast##d##Sleef, OP##Fast##d##Sleef)
 
 DISPATCH_ALL_F(Exp, Sleef_finz_expf8_u10avx2)
 DISPATCH_ALL_F(Expm1, Sleef_finz_expm1f8_u10avx2)

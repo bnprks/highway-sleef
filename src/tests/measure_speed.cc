@@ -35,7 +35,8 @@
 #include "hwy/tests/test_util.h"
 // clang-format on
 
-static void fill_float(float *x, size_t n, float min, float max) {
+template <typename real>
+static void fill_float(real *x, size_t n, real min, real max) {
   std::mt19937 gen(125124);  // Standard mersenne_twister_engine with seed
   std::uniform_real_distribution<> dis(min, max);
   for (size_t i = 0; i < n; i++) x[i] = dis(gen);
@@ -52,44 +53,46 @@ void BM_op(benchmark::State &state, Args &&...args) {
   auto in = hwy::AllocateAligned<float>(N);
   auto out = hwy::AllocateAligned<float>(N);
 
-  fill_float(in.get(), N, min, max);
+  fill_float<float>(in.get(), N, min, max);
   for (auto _ : state) {
     func(in.get(), N, out.get());
     benchmark::DoNotOptimize(out);
   }
 }
 
+
 #if HWY_ONCE
 
 #define BENCHMARK_ALL(OP, range_start, range_end)                    \
-  BENCHMARK_CAPTURE(BM_op, OP##Hwy, hwy::OP##Hwy, 1 << 12, range_start,     \
+  BENCHMARK_CAPTURE(BM_op, OP##f##Hwy, hwy::OP##f##Hwy, 1 << 12, range_start,     \
                     range_end);                                             \
-  BENCHMARK_CAPTURE(BM_op, OP##Translated, hwy::OP##Translated, 1 << 12,    \
+  BENCHMARK_CAPTURE(BM_op, OP##f##Translated, hwy::OP##f##Translated, 1 << 12,    \
                     range_start, range_end);                                \
-  BENCHMARK_CAPTURE(BM_op, OP##Sleef, hwy::OP##Sleef, 1 << 12, range_start, \
+  BENCHMARK_CAPTURE(BM_op, OP##f##Sleef, hwy::OP##f##Sleef, 1 << 12, range_start, \
                     range_end);
 
 #define BENCHMARK_ALL_FAST(OP, range_start, range_end)               \
-  BENCHMARK_CAPTURE(BM_op, OP##Hwy, hwy::OP##Hwy, 1 << 12, range_start,     \
+  BENCHMARK_CAPTURE(BM_op, OP##f##Hwy, hwy::OP##f##Hwy, 1 << 12, range_start,     \
                     range_end);                                             \
-  BENCHMARK_CAPTURE(BM_op, OP##Translated, hwy::OP##Translated, 1 << 12,    \
+  BENCHMARK_CAPTURE(BM_op, OP##f##Translated, hwy::OP##f##Translated, 1 << 12,    \
                     range_start, range_end);                                \
-  BENCHMARK_CAPTURE(BM_op, OP##Sleef, hwy::OP##Sleef, 1 << 12, range_start, \
+  BENCHMARK_CAPTURE(BM_op, OP##f##Sleef, hwy::OP##f##Sleef, 1 << 12, range_start, \
                     range_end);                                             \
-  BENCHMARK_CAPTURE(BM_op, OP##FastTranslated, hwy::OP##FastTranslated,     \
+  BENCHMARK_CAPTURE(BM_op, OP##f##FastTranslated, hwy::OP##Fast##f##Translated,     \
                     1 << 12, range_start, range_end);                       \
-  BENCHMARK_CAPTURE(BM_op, OP##FastSleef, hwy::OP##FastSleef, 1 << 12,      \
+  BENCHMARK_CAPTURE(BM_op, OP##f##FastSleef, hwy::OP##Fast##f##Sleef, 1 << 12,      \
                     range_start, range_end);
 
 #define BENCHMARK_ALL_FAST_NO_HWY(OP, range_start, range_end)               \
-  BENCHMARK_CAPTURE(BM_op, OP##Translated, hwy::OP##Translated, 1 << 12,    \
+  BENCHMARK_CAPTURE(BM_op, OP##f##Translated, hwy::OP##f##Translated, 1 << 12,    \
                     range_start, range_end);                                \
-  BENCHMARK_CAPTURE(BM_op, OP##Sleef, hwy::OP##Sleef, 1 << 12, range_start, \
+  BENCHMARK_CAPTURE(BM_op, OP##f##Sleef, hwy::OP##f##Sleef, 1 << 12, range_start, \
                     range_end);                                             \
-  BENCHMARK_CAPTURE(BM_op, OP##FastTranslated, hwy::OP##FastTranslated,     \
+  BENCHMARK_CAPTURE(BM_op, OP##f##FastTranslated, hwy::OP##Fast##f##Translated,     \
                     1 << 12, range_start, range_end);                       \
-  BENCHMARK_CAPTURE(BM_op, OP##FastSleef, hwy::OP##FastSleef, 1 << 12,      \
+  BENCHMARK_CAPTURE(BM_op, OP##f##FastSleef, hwy::OP##Fast##f##Sleef, 1 << 12,      \
                     range_start, range_end);
+
 
 BENCHMARK_ALL(Exp, -FLT_MAX, 104);
 BENCHMARK_ALL(Expm1, -FLT_MAX, 104);

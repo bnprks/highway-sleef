@@ -203,10 +203,10 @@ HWY_NOINLINE void AllFloatULP(
 
 
 #define ALL_FLOAT_ULP_HELPER(OP, ref, range_start, range_end) \
-  AllFloatULP(#OP, ref, {{"hwy", hwy::OP##Hwy}, {"translated", hwy::OP##Translated}}, range_start, range_end)
+  AllFloatULP(#OP, ref, {{"hwy", hwy::OP##f##Hwy}, {"translated", hwy::OP##f##Translated}}, range_start, range_end)
 
 #define ALL_FLOAT_ULP_FAST_HELPER(OP, ref, range_start, range_end) \
-  AllFloatULP(#OP, ref, {{"hwy", hwy::OP##Hwy}, {"translated", hwy::OP##Translated}, {"translated_fast", hwy::OP##FastTranslated}}, range_start, range_end)
+  AllFloatULP(#OP, ref, {{"hwy", hwy::OP##f##Hwy}, {"translated", hwy::OP##f##Translated}, {"translated_fast", hwy::OP##Fast##f##Translated}}, range_start, range_end)
 
 int main() {
   ALL_FLOAT_ULP_HELPER(Exp, std::exp, -FLT_MAX, 104);
@@ -218,13 +218,13 @@ int main() {
 
   ALL_FLOAT_ULP_FAST_HELPER(Sin, std::sin, -39000, 39000);
   ALL_FLOAT_ULP_FAST_HELPER(Cos, std::cos, -39000, 39000);
-  AllFloatULP("Tan", std::tan, {{"translated", hwy::TanTranslated}, {"translated_fast", hwy::TanFastTranslated}}, -39000, 39000);
+  AllFloatULP("Tan", std::tan, {{"translated", hwy::TanfTranslated}, {"translated_fast", hwy::TanFastfTranslated}}, -39000, 39000);
 
   ALL_FLOAT_ULP_FAST_HELPER(Sinh, std::sinh, -88.7228, +88.7228);
   ALL_FLOAT_ULP_FAST_HELPER(Sinh, std::sinh, -89, +89);
   ALL_FLOAT_ULP_FAST_HELPER(Sinh, std::sinh, -88, +88);
-  AllFloatULP("Cosh", std::cosh, {{"translated", hwy::CoshTranslated}, {"translated_fast", hwy::CoshFastTranslated}}, -89, +89);
-  AllFloatULP("Cosh", std::cosh, {{"translated", hwy::CoshTranslated}, {"translated_fast", hwy::CoshFastTranslated}}, -88, +88);
+  AllFloatULP("Cosh", std::cosh, {{"translated", hwy::CoshfTranslated}, {"translated_fast", hwy::CoshFastfTranslated}}, -89, +89);
+  AllFloatULP("Cosh", std::cosh, {{"translated", hwy::CoshfTranslated}, {"translated_fast", hwy::CoshFastfTranslated}}, -88, +88);
   ALL_FLOAT_ULP_FAST_HELPER(Tanh, std::tanh, -FLT_MAX, FLT_MAX);
 
   ALL_FLOAT_ULP_FAST_HELPER(Asin, std::asin, -1, 1);

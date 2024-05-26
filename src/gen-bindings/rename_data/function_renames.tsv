@@ -19,6 +19,7 @@ xexp	Exp	Computes e^x
 xexp2	Exp2	Computes 2^x
 xexp10	Exp10	Computes 10^x
 xexpm1	Expm1	Computes e^x - 1
+expm1k	Expm1k	Computes e^x - 1
 xlog_u1	Log	Computes ln(x) with 1.0 ULP accuracy
 xlog	LogFast	Computes ln(x) with 3.5 ULP accuracy
 xlog2	Log2	Computes log2(x) with 1.0 ULP accuracy
