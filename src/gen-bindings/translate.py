@@ -30,7 +30,6 @@ def main():
     )
     parser.add_argument('sleef_src', help="Path of sleef 'src' folder")
     parser.add_argument('rename_data', help="Path of rename_data folder")
-    parser.add_argument('treesitter_lib', help="Path for compiled treesitter grammar")
     parser.add_argument('output', help="Path to write generated header")
     
     args = parser.parse_args()
@@ -39,7 +38,6 @@ def main():
     rename_data = pathlib.Path(args.rename_data)
     out = open(args.output, 'w')
 
-    set_treesitter_lib(args.treesitter_lib)
 
     target_functions = [
         # Single-precision ops
