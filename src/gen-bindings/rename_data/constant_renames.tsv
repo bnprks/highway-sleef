@@ -19,20 +19,33 @@ L10Lf	Log10Of2_Lo_f	float	Log10Of2_Hi_f + Log10Of2_Lo_f ~= log10(2)
 L10U	Log10Of2_Hi_d	double	Log10Of2_Hi_d + Log10Of2_Lo_d ~= log10(2)
 L10L	Log10Of2_Lo_d	double	Log10Of2_Hi_d + Log10Of2_Lo_d ~= log10(2)
 
-TRIGRANGEMAXf	TrigRangeMax	float	Max value for using 4-part sum of Pi
+TRIGRANGEMAXf	TrigRangeMaxf	float	Max value for using 4-part sum of Pi
 PI_Af	PiAf	float	Four-part sum of Pi (1/4)
 PI_Bf	PiBf	float	Four-part sum of Pi (2/4)
 PI_Cf	PiCf	float	Four-part sum of Pi (3/4)
 PI_Df	PiDf	float	Four-part sum of Pi (4/4)
 
-TRIGRANGEMAX2f	TrigRangeMax2	float	Max value for using 3-part sum of Pi
+TRIGRANGEMAX	TrigRangeMax	double	Max value for using 4-part sum of Pi
+PI_A	PiA	double	Four-part sum of Pi (1/4)
+PI_B	PiB	double	Four-part sum of Pi (2/4)
+PI_C	PiC	double	Four-part sum of Pi (3/4)
+PI_D	PiD	double	Four-part sum of Pi (4/4)
+
+TRIGRANGEMAX2f	TrigRangeMax2f	float	Max value for using 3-part sum of Pi
 PI_A2f	PiA2f	float	Three-part sum of Pi (1/3)
 PI_B2f	PiB2f	float	Three-part sum of Pi (2/3)
 PI_C2f	PiC2f	float	Three-part sum of Pi (3/3)
 
+TRIGRANGEMAX2	TrigRangeMax2	double	Max value for using 3-part sum of Pi
+PI_A2	PiA2	double	Three-part sum of Pi (1/3)
+PI_B2	PiB2	double	Three-part sum of Pi (2/3)
+PI_C2	PiC2	double	Three-part sum of Pi (3/3)
+
 M_PIf	Pif	float	pi (float)
 M_PI	Pi	double	pi
 M_1_PI	OneOverPi	float	1 / pi
+M_2_PI_H	TwoOverPiH	double	Two-part sum of 2 / pi (1/2)
+M_2_PI_L	TwoOverPiL	double	Two-part sum of 2 / pi (2/2)
 
 SQRT_FLT_MAX	SqrtFloatMax	float	Square root of max floating-point number
 

@@ -9,6 +9,8 @@ vdouble	Vec<D>	double
 vdouble2	Vec2<D>	double
 fi_t	Vec2<D>	float
 dfi_t	Vec3<D>	float
+di_t	Vec2<D>	double
+ddi_t	Vec3<D>	double
 
 # Used in NEON reciprocal sqrt for some reason
 float32x4_t	Vec<D>	float

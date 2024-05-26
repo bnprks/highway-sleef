@@ -50,12 +50,26 @@ xsinf	SinFast	Computes sin(x) with 3.5 ULP accuracy
 xcosf	CosFast	Computes cos(x) with 3.5 ULP accuracy
 xtanf	TanFast	Computes tan(x) with 3.5 ULP accuracy
 
+xsin_u1	Sin	Computes sin(x) with 1.0 ULP accuracy
+xcos_u1	Cos	Computes cos(x) with 1.0 ULP accuracy
+xtan_u1	Tan	Computes tan(x) with 1.0 ULP accuracy
+xsin	SinFast	Computes sin(x) with 3.5 ULP accuracy
+xcos	CosFast	Computes cos(x) with 3.5 ULP accuracy
+xtan	TanFast	Computes tan(x) with 3.5 ULP accuracy
+
 xsinhf	Sinh	Computes sinh(x) with 1.0 ULP accuracy
 xcoshf	Cosh	Computes cosh(x) with 1.0 ULP accuracy
 xtanhf	Tanh	Computes tanh(x) with 1.0 ULP accuracy
 xsinhf_u35	SinhFast	Computes sinh(x) with 3.5 ULP accuracy
 xcoshf_u35	CoshFast	Computes cosh(x) with 3.5 ULP accuracy
 xtanhf_u35	TanhFast	Computes tanh(x) with 3.5 ULP accuracy
+
+xsinh	Sinh	Computes sinh(x) with 1.0 ULP accuracy
+xcosh	Cosh	Computes cosh(x) with 1.0 ULP accuracy
+xtanh	Tanh	Computes tanh(x) with 1.0 ULP accuracy
+xsinh_u35	SinhFast	Computes sinh(x) with 3.5 ULP accuracy
+xcosh_u35	CoshFast	Computes cosh(x) with 3.5 ULP accuracy
+xtanh_u35	TanhFast	Computes tanh(x) with 3.5 ULP accuracy
 
 xacosf_u1	Acos	Computes acos(x) with 1.0 ULP accuracy
 xasinf_u1	Asin	Computes asin(x) with 1.0 ULP accuracy
@@ -64,9 +78,20 @@ xacosf	AcosFast	Computes acos(x) with 3.5 ULP accuracy
 xasinf	AsinFast	Computes asin(x) with 3.5 ULP accuracy
 xatanf	AtanFast	Computes atan(x) with 3.5 ULP accuracy
 
+xacos_u1	Acos	Computes acos(x) with 1.0 ULP accuracy
+xasin_u1	Asin	Computes asin(x) with 1.0 ULP accuracy
+xatan_u1	Atan	Computes atan(x) with 1.0 ULP accuracy
+xacos	AcosFast	Computes acos(x) with 3.5 ULP accuracy
+xasin	AsinFast	Computes asin(x) with 3.5 ULP accuracy
+xatan	AtanFast	Computes atan(x) with 3.5 ULP accuracy
+
 xasinhf	Asinh	Computes asinh(x) with 1 ULP accuracy
 xacoshf	Acosh	Computes acosh(x) with 1 ULP accuracy
 xatanhf	Atanh	Computes atanh(x) with 1 ULP accuracy
+
+xasinh	Asinh	Computes asinh(x) with 1 ULP accuracy
+xacosh	Acosh	Computes acosh(x) with 1 ULP accuracy
+xatanh	Atanh	Computes atanh(x) with 1 ULP accuracy
 
 ############
 # Misc
@@ -99,6 +124,7 @@ vadd_vd_8vd	Add8	Add ((((((v0 + 1) + v2) + v3) + v4) + v5) + v6) + v7
 vsub_vd_3vd	Sub3	Sub (v0 - 1) - v2
 vsub_vd_4vd	Sub4	Sub ((v0 - 1) - v2) - v3
 vsub_vd_5vd	Sub5	Sub (((v0 - 1) - v2) - v3) - v4
+vsub_vd_6vd	Sub6	Sub ((((v0 - 1) - v2) - v3) - v4) - v5
 
 
 vsignbit_vo_vf	SignBitMask	Create a mask of which is true if x's sign bit is set
@@ -114,6 +140,10 @@ vmulsign_vd_vd_vd	MulSignBit	Calculate x * sign(y) with only bitwise logic
 
 rempif	PayneHanekReduction	Calculate Payne Hanek reduction. This appears to return ((2*x/pi) - round(2*x/pi)) * pi / 2 and the integer quadrant of x in range -2 to 2 (0 is [-pi/4, pi/4], 2/-2 are from [3pi/4, 5pi/4] with the sign flip a little after pi).
 rempisubf	PayneHanekReductionHelper	Helper for Payne Hanek reduction.
+
+rempi	PayneHanekReduction_d	Calculate Payne Hanek reduction. This appears to return ((2*x/pi) - round(2*x/pi)) * pi / 2 and the integer quadrant of x in range -2 to 2 (0 is [-pi/4, pi/4], 2/-2 are from [3pi/4, 5pi/4] with the sign flip a little after pi).
+rempisub	PayneHanekReductionHelper_d	Helper for Payne Hanek reduction.
+
 
 visint_vo_vd	IsInt	True if d is an integer
 visodd_vo_vd	IsOdd	True if d is an odd (assuming d is an integer)
@@ -153,6 +183,7 @@ ddadd_vd2_vd_vd	AddFastDD	Computes x + y in double-double precision, sped up by 
 
 dfsub_vf2_vf2_vf2	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
 dfsub_vf2_vf2_vf	SubDF	Computes x - y in double-float precision, assuming |x| > |y|
+ddsub_vd2_vd2_vd2	SubDD	Computes x - y in double-double precision, assuming |x| > |y|
 
 dfrec_vf2_vf2	RecDF	Computes 1/x in double-float precision
 dfrec_vf2_vf	RecDF	Computes 1/x in double-float precision
@@ -160,6 +191,7 @@ ddrec_vd2_vd2	RecDD	Computes 1/x in double-double precision
 ddrec_vd2_vd	RecDD	Computes 1/x in double-double precision
 
 dfneg_vf2_vf2	NegDF	Computes -x in double-float precision
+ddneg_vd2_vd2	NegDD	Compmutes -x in double-double precision
 
 dfscale_vf2_vf2_vf	ScaleDF	Computes x * y in double-float precision
 dfmul_vf2_vf2_vf	MulDF	Computes x * y in double-float precision

@@ -83,7 +83,7 @@ int main() {
     // }
 
     printf("Sleef scalar result: %a\n", Sleef_log1pf1_u10(tough_input));
-    printf("Sleef vector sse4: %a\n", _mm_cvtss_f32(Sleef_log1pf4_u10sse4(_mm_set1_pd(tough_input))));
+    printf("Sleef vector sse4: %a\n", _mm_cvtss_f32(Sleef_log1pf4_u10sse4(_mm_set1_ps(tough_input))));
     printf("Correct result: %a\n", std::log1p(tough_input));
 }
 #endif

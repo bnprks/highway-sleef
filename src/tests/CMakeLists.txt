@@ -28,7 +28,7 @@ foreach(TARGET IN LISTS TEST_TARGETS)
   set_target_properties(${TARGET} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
   target_link_libraries(${TARGET} PUBLIC hwy profiler sleef)
   target_include_directories(${TARGET} PUBLIC "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}")
-  target_compile_options(${TARGET} PUBLIC -ffp-contract=off -Wno-ignored-attributes -march=haswell -maes -O2 -g)
+  target_compile_options(${TARGET} PUBLIC -ffp-contract=off -Wno-ignored-attributes -march=skylake -maes -O2 -g)
 endforeach()
 
 target_compile_options(mismatch_test PRIVATE -DHWY_IS_TEST=1)

@@ -95,6 +95,15 @@ def main():
         "xhypot_u05",
         "xhypot_u35",
         "xpow",
+        "xsin_u1",
+        "xcos_u1",
+        "xtan_u1",
+        "xsin",
+        "xcos",
+        "xtan",
+        "xsinh",
+        "xcosh",
+        "xtanh"
     ]
 
     # Read data files to register translations for simd ops, intermediate functions, and types
@@ -682,6 +691,7 @@ FILE_TEMPLATE = textwrap.dedent(
 #include "hwy/highway.h"
 
 extern const float PayneHanekReductionTable_float[]; // Precomputed table of exponent values for Payne Hanek reduction
+extern const double PayneHanekReductionTable_double[]; // Precomputed table of exponent values for Payne Hanek reduction
 
 HWY_BEFORE_NAMESPACE();
 namespace hwy {{

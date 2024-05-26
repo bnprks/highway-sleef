@@ -24,6 +24,7 @@
 #include "hwy/highway.h"
 
 extern const float PayneHanekReductionTable_float[]; // Precomputed table of exponent values for Payne Hanek reduction
+extern const double PayneHanekReductionTable_double[]; // Precomputed table of exponent values for Payne Hanek reduction
 
 HWY_BEFORE_NAMESPACE();
 namespace hwy {
@@ -378,6 +379,51 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) HypotFast(const D df, Vec<D> x, Vec<D>
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Pow(const D df, Vec<D> x, Vec<D> y);
 
+// Computes sin(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:521 xsin_u1
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Sin(const D df, Vec<D> d);
+
+// Computes cos(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:787 xcos_u1
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Cos(const D df, Vec<D> d);
+
+// Computes tan(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:1645 xtan_u1
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Tan(const D df, Vec<D> d);
+
+// Computes sin(x) with 3.5 ULP accuracy
+// Translated from libm/sleefsimddp.c:382 xsin
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) SinFast(const D df, Vec<D> d);
+
+// Computes cos(x) with 3.5 ULP accuracy
+// Translated from libm/sleefsimddp.c:652 xcos
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) CosFast(const D df, Vec<D> d);
+
+// Computes tan(x) with 3.5 ULP accuracy
+// Translated from libm/sleefsimddp.c:1517 xtan
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) TanFast(const D df, Vec<D> d);
+
+// Computes sinh(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:2435 xsinh
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Sinh(const D df, Vec<D> x);
+
+// Computes cosh(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:2448 xcosh
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Cosh(const D df, Vec<D> x);
+
+// Computes tanh(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:2460 xtanh
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Tanh(const D df, Vec<D> x);
+
 namespace {
 
 template<class D>
@@ -534,6 +580,16 @@ constexpr double Pi = 3.141592653589793238462643383279502884; // pi
 constexpr float OneOverPi = 0.318309886183790671537767526745028724; // 1 / pi
 constexpr float FloatMin = 0x1p-126; // Minimum normal float value
 constexpr double DoubleMin = 0x1p-1022; // Minimum normal double value
+constexpr double PiA = 3.1415926218032836914; // Four-part sum of Pi (1/4)
+constexpr double PiB = 3.1786509424591713469e-08; // Four-part sum of Pi (2/4)
+constexpr double PiC = 1.2246467864107188502e-16; // Four-part sum of Pi (3/4)
+constexpr double PiD = 1.2736634327021899816e-24; // Four-part sum of Pi (4/4)
+constexpr double TrigRangeMax = 1e+14; // Max value for using 4-part sum of Pi
+constexpr double PiA2 = 3.141592653589793116; // Three-part sum of Pi (1/3)
+constexpr double PiB2 = 1.2246467991473532072e-16; // Three-part sum of Pi (2/3)
+constexpr double TrigRangeMax2 = 15; // Max value for using 3-part sum of Pi
+constexpr double TwoOverPiH = 0.63661977236758138243; // Two-part sum of 2 / pi (1/2)
+constexpr double TwoOverPiL = -3.9357353350364971764e-17; // Two-part sum of 2 / pi (2/2)
 constexpr double Ln2Hi_d = .69314718055966295651160180568695068359375; // Ln2Hi + Ln2Lo ~= ln(2)
 constexpr double Ln2Lo_d = .28235290563031577122588448175013436025525412068e-12; // Ln2Hi + Ln2Lo ~= ln(2)
 constexpr double OneOverLn2_d = 1.442695040888963407359924681001892137426645954152985934135449406931; // 1 / ln(2)
@@ -546,11 +602,11 @@ constexpr float PiAf = 3.140625f; // Four-part sum of Pi (1/4)
 constexpr float PiBf = 0.0009670257568359375f; // Four-part sum of Pi (2/4)
 constexpr float PiCf = 6.2771141529083251953e-07f; // Four-part sum of Pi (3/4)
 constexpr float PiDf = 1.2154201256553420762e-10f; // Four-part sum of Pi (4/4)
-constexpr float TrigRangeMax = 39000; // Max value for using 4-part sum of Pi
+constexpr float TrigRangeMaxf = 39000; // Max value for using 4-part sum of Pi
 constexpr float PiA2f = 3.1414794921875f; // Three-part sum of Pi (1/3)
 constexpr float PiB2f = 0.00011315941810607910156f; // Three-part sum of Pi (2/3)
 constexpr float PiC2f = 1.9841872589410058936e-09f; // Three-part sum of Pi (3/3)
-constexpr float TrigRangeMax2 = 125.0f; // Max value for using 3-part sum of Pi
+constexpr float TrigRangeMax2f = 125.0f; // Max value for using 3-part sum of Pi
 constexpr float SqrtFloatMax = 18446743523953729536.0; // Square root of max floating-point number
 constexpr float Ln2Hi_f = 0.693145751953125f; // Ln2Hi + Ln2Lo ~= ln(2)
 constexpr float Ln2Lo_f = 1.428606765330187045e-06f; // Ln2Hi + Ln2Lo ~= ln(2)
@@ -616,6 +672,14 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) MulDF(const D df, Vec<D> x, Vec<D> y) 
 #endif
 }
 
+// Normalizes a double-float precision representation (redistributes hi vs. lo value)
+// Translated from common/df.h:102 dfnormalize_vf2_vf2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) NormalizeDF(const D df, Vec2<D> t) {
+  Vec<D> s = Add(Get2<0>(t), Get2<1>(t));
+  return Create2(df, s, Add(Sub(Get2<0>(t), s), Get2<1>(t)));
+}
+
 // Add (v0 + 1) + v2
 // Translated from common/df.h:59 vadd_vf_3vf
 template<class D>
@@ -631,12 +695,12 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddFastDF(const D df, Vec<D> x, Vec2<D
   return Create2(df, s, Add3(df, Sub(x, s), Get2<0>(y), Get2<1>(y)));
 }
 
-// Normalizes a double-float precision representation (redistributes hi vs. lo value)
-// Translated from common/df.h:102 dfnormalize_vf2_vf2
+// Computes x + y in double-float precision, sped up by assuming |x| > |y|
+// Translated from common/df.h:129 dfadd_vf2_vf2_vf
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) NormalizeDF(const D df, Vec2<D> t) {
-  Vec<D> s = Add(Get2<0>(t), Get2<1>(t));
-  return Create2(df, s, Add(Sub(Get2<0>(t), s), Get2<1>(t)));
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddFastDF(const D df, Vec2<D> x, Vec<D> y) {
+  Vec<D> s = Add(Get2<0>(x), y);
+  return Create2(df, s, Add3(df, Sub(Get2<0>(x), s), y, Get2<1>(x)));
 }
 
 // Computes x * y in double-float precision
@@ -660,34 +724,6 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) MulDF(const D df, Vec2<D> x, Vec<D> y)
 
   return Create2(df, s, t);
 #endif
-}
-
-// Computes x + y in double-float precision, sped up by assuming |x| > |y|
-// Translated from common/df.h:129 dfadd_vf2_vf2_vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddFastDF(const D df, Vec2<D> x, Vec<D> y) {
-  Vec<D> s = Add(Get2<0>(x), y);
-  return Create2(df, s, Add3(df, Sub(Get2<0>(x), s), y, Get2<1>(x)));
-}
-
-// Computes x + y in double-float precision
-// Translated from common/df.h:139 dfadd2_vf2_vf2_vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddDF(const D df, Vec2<D> x, Vec<D> y) {
-  Vec<D> s = Add(Get2<0>(x), y);
-  Vec<D> v = Sub(s, Get2<0>(x));
-  Vec<D> t = Add(Sub(Get2<0>(x), Sub(s, v)), Sub(y, v));
-  return Create2(df, s, Add(t, Get2<1>(x)));
-}
-
-// Computes x + y in double-float precision
-// Translated from common/df.h:158 dfadd2_vf2_vf2_vf2
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddDF(const D df, Vec2<D> x, Vec2<D> y) {
-  Vec<D> s = Add(Get2<0>(x), Get2<0>(y));
-  Vec<D> v = Sub(s, Get2<0>(x));
-  Vec<D> t = Add(Sub(Get2<0>(x), Sub(s, v)), Sub(Get2<0>(y), v));
-  return Create2(df, s, Add(t, Add(Get2<1>(x), Get2<1>(y))));
 }
 
 // Computes x^2 in double-float precision
@@ -733,6 +769,26 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) MulDF(const D df, Vec2<D> x, Vec2<D> y
 
   return Create2(df, s, t);
 #endif
+}
+
+// Computes x + y in double-float precision
+// Translated from common/df.h:139 dfadd2_vf2_vf2_vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddDF(const D df, Vec2<D> x, Vec<D> y) {
+  Vec<D> s = Add(Get2<0>(x), y);
+  Vec<D> v = Sub(s, Get2<0>(x));
+  Vec<D> t = Add(Sub(Get2<0>(x), Sub(s, v)), Sub(y, v));
+  return Create2(df, s, Add(t, Get2<1>(x)));
+}
+
+// Computes x + y in double-float precision
+// Translated from common/df.h:158 dfadd2_vf2_vf2_vf2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddDF(const D df, Vec2<D> x, Vec2<D> y) {
+  Vec<D> s = Add(Get2<0>(x), Get2<0>(y));
+  Vec<D> v = Sub(s, Get2<0>(x));
+  Vec<D> t = Add(Sub(Get2<0>(x), Sub(s, v)), Sub(Get2<0>(y), v));
+  return Create2(df, s, Add(t, Add(Get2<1>(x), Get2<1>(y))));
 }
 
 // Computes e^x in double-float precision
@@ -785,6 +841,22 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddFastDF(const D df, Vec2<D> x, Vec2<
   return Create2(df, s, Add4(df, Sub(Get2<0>(x), s), Get2<0>(y), Get2<1>(x), Get2<1>(y)));
 }
 
+// Computes x * y in double-float precision
+// Translated from common/df.h:107 dfscale_vf2_vf2_vf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) ScaleDF(const D df, Vec2<D> d, Vec<D> s) {
+  return Create2(df, Mul(Get2<0>(d), s), Mul(Get2<1>(d), s));
+}
+
+// Sets the exponent of 'x' to 2^e. Very fast, "no denormal"
+// Translated from libm/sleefsimdsp.c:539 vldexp3_vf_vf_vi2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) LoadExp3(const D df, Vec<D> d, Vec<RebindToSigned<D>> q) {
+  RebindToSigned<D> di;
+  
+  return BitCast(df, Add(BitCast(di, d), ShiftLeft<23>(q)));
+}
+
 // Computes x + y in double-float precision
 // Translated from common/df.h:116 dfadd2_vf2_vf_vf
 template<class D>
@@ -792,13 +864,6 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) AddDF(const D df, Vec<D> x, Vec<D> y) 
   Vec<D> s = Add(x, y);
   Vec<D> v = Sub(s, x);
   return Create2(df, s, Add(Sub(x, Sub(s, v)), Sub(y, v)));
-}
-
-// Computes x * y in double-float precision
-// Translated from common/df.h:107 dfscale_vf2_vf2_vf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) ScaleDF(const D df, Vec2<D> d, Vec<D> s) {
-  return Create2(df, Mul(Get2<0>(d), s), Mul(Get2<1>(d), s));
 }
 
 // Integer log of x, "but the argument must be a normalized value"
@@ -849,15 +914,6 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) DivDF(const D df, Vec2<D> n, Vec2<D> d
 
   return Create2(df, s, MulAdd(t, Sub(Get2<1>(n), Mul(s, Get2<1>(d))), u));
 #endif
-}
-
-// Sets the exponent of 'x' to 2^e. Very fast, "no denormal"
-// Translated from libm/sleefsimdsp.c:539 vldexp3_vf_vf_vi2
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) LoadExp3(const D df, Vec<D> d, Vec<RebindToSigned<D>> q) {
-  RebindToSigned<D> di;
-  
-  return BitCast(df, Add(BitCast(di, d), ShiftLeft<23>(q)));
 }
 
 // Computes x + y in double-float precision
@@ -956,47 +1012,6 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SqrtDF(const D df, Vec2<D> d) {
   return ScaleDF(df, MulDF(df, AddDF(df, d, MulDF(df, t, t)), RecDF(df, t)), Set(df, 0.5));
 }
 
-// Computes ln(x) in double-float precision (version 1)
-// Translated from libm/sleefsimdsp.c:2198 logkf
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) LogDF(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
-  
-  Vec2<D> x, x2;
-  Vec<D> t, m;
-
-#if !(HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3)
-  Mask<D> o = Lt(d, Set(df, FloatMin));
-  d = IfThenElse(o, Mul(d, Set(df, (float)(INT64_C(1) << 32) * (float)(INT64_C(1) << 32))), d);
-  Vec<RebindToSigned<D>> e = ILogB2(df, Mul(d, Set(df, 1.0f/0.75f)));
-  m = LoadExp3(df, d, Neg(e));
-  e = IfThenElse(RebindMask(di, o), Sub(e, Set(di, 64)), e);
-#else
-  Vec<D> e = GetExponent(Mul(d, Set(df, 1.0f/0.75f)));
-  e = IfThenElse(Eq(e, Inf(df)), Set(df, 128.0f), e);
-  m = GetMantissa(d);
-#endif
-
-  x = DivDF(df, AddDF(df, Set(df, -1), m), AddDF(df, Set(df, 1), m));
-  x2 = SquareDF(df, x);
-
-  t = Set(df, 0.240320354700088500976562);
-  t = MulAdd(t, Get2<0>(x2), Set(df, 0.285112679004669189453125));
-  t = MulAdd(t, Get2<0>(x2), Set(df, 0.400007992982864379882812));
-  Vec2<D> c = Create2(df, Set(df, 0.66666662693023681640625f), Set(df, 3.69183861259614332084311e-09f));
-
-#if !(HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3)
-  Vec2<D> s = MulDF(df, Create2(df, Set(df, 0.69314718246459960938f), Set(df, -1.904654323148236017e-09f)), ConvertTo(df, e));
-#else
-  Vec2<D> s = MulDF(df, Create2(df, Set(df, 0.69314718246459960938f), Set(df, -1.904654323148236017e-09f)), e);
-#endif
-
-  s = AddFastDF(df, s, ScaleDF(df, x, Set(df, 2)));
-  s = AddFastDF(df, s, MulDF(df, MulDF(df, x2, x),
-					     AddDF(df, MulDF(df, x2, t), c)));
-  return s;
-}
-
 // Create a mask of which is true if x's sign bit is set
 // Translated from libm/sleefsimdsp.c:472 vsignbit_vo_vf
 template<class D>
@@ -1056,6 +1071,47 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) ExpDF_float(const D df, Vec2<D> d) {
   u = BitCast(df, IfThenZeroElse(RebindMask(du, Lt(Get2<0>(d), Set(df, -104))), BitCast(du, u)));
   
   return u;
+}
+
+// Computes ln(x) in double-float precision (version 1)
+// Translated from libm/sleefsimdsp.c:2198 logkf
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) LogDF(const D df, Vec<D> d) {
+  RebindToSigned<D> di;
+  
+  Vec2<D> x, x2;
+  Vec<D> t, m;
+
+#if !(HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3)
+  Mask<D> o = Lt(d, Set(df, FloatMin));
+  d = IfThenElse(o, Mul(d, Set(df, (float)(INT64_C(1) << 32) * (float)(INT64_C(1) << 32))), d);
+  Vec<RebindToSigned<D>> e = ILogB2(df, Mul(d, Set(df, 1.0f/0.75f)));
+  m = LoadExp3(df, d, Neg(e));
+  e = IfThenElse(RebindMask(di, o), Sub(e, Set(di, 64)), e);
+#else
+  Vec<D> e = GetExponent(Mul(d, Set(df, 1.0f/0.75f)));
+  e = IfThenElse(Eq(e, Inf(df)), Set(df, 128.0f), e);
+  m = GetMantissa(d);
+#endif
+
+  x = DivDF(df, AddDF(df, Set(df, -1), m), AddDF(df, Set(df, 1), m));
+  x2 = SquareDF(df, x);
+
+  t = Set(df, 0.240320354700088500976562);
+  t = MulAdd(t, Get2<0>(x2), Set(df, 0.285112679004669189453125));
+  t = MulAdd(t, Get2<0>(x2), Set(df, 0.400007992982864379882812));
+  Vec2<D> c = Create2(df, Set(df, 0.66666662693023681640625f), Set(df, 3.69183861259614332084311e-09f));
+
+#if !(HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3)
+  Vec2<D> s = MulDF(df, Create2(df, Set(df, 0.69314718246459960938f), Set(df, -1.904654323148236017e-09f)), ConvertTo(df, e));
+#else
+  Vec2<D> s = MulDF(df, Create2(df, Set(df, 0.69314718246459960938f), Set(df, -1.904654323148236017e-09f)), e);
+#endif
+
+  s = AddFastDF(df, s, ScaleDF(df, x, Set(df, 2)));
+  s = AddFastDF(df, s, MulDF(df, MulDF(df, x2, x),
+					     AddDF(df, MulDF(df, x2, t), c)));
+  return s;
 }
 
 // Bitwise or of x with sign bit of y
@@ -1335,21 +1391,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) NormalizeDD(const D df, Vec2<D> t) {
   return Create2(df, s, Add(Sub(Get2<0>(t), s), Get2<1>(t)));
 }
 
-// Add (v0 + 1) + v2
-// Translated from common/dd.h:59 vadd_vd_3vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Add3(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2) {
-  return Add(Add(v0, v1), v2);
-}
-
-// Computes x + y in double-double precision, sped up by assuming |x| > |y|
-// Translated from common/dd.h:147 ddadd_vd2_vd_vd2
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec<D> x, Vec2<D> y) {
-  Vec<D> s = Add(x, Get2<0>(y));
-  return Create2(df, s, Add3(df, Sub(x, s), Get2<0>(y), Get2<1>(y)));
-}
-
 // Set the bottom half of mantissa bits to 0 (used in some double-double math)
 // Translated from common/dd.h:33 vupper_vd_vd
 template<class D>
@@ -1357,6 +1398,13 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) LowerPrecision(const D df, Vec<D> d) {
   RebindToUnsigned<D> du;
   
   return BitCast(df, And(BitCast(du, d), Set(du, (static_cast<uint64_t>(0xffffffff) << 32) | 0xf8000000)));
+}
+
+// Add (v0 + 1) + v2
+// Translated from common/dd.h:59 vadd_vd_3vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Add3(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2) {
+  return Add(Add(v0, v1), v2);
 }
 
 // Add ((v0 + 1) + v2) + v3
@@ -1389,6 +1437,24 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) MulDD(const D df, Vec<D> x, Vec<D> y)
 #endif
 }
 
+// Computes x + y in double-double precision, sped up by assuming |x| > |y|
+// Translated from common/dd.h:147 ddadd_vd2_vd_vd2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec<D> x, Vec2<D> y) {
+  Vec<D> s = Add(x, Get2<0>(y));
+  return Create2(df, s, Add3(df, Sub(x, s), Get2<0>(y), Get2<1>(y)));
+}
+
+// Computes x + y in double-double precision
+// Translated from common/dd.h:140 ddadd2_vd2_vd2_vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddDD(const D df, Vec2<D> x, Vec<D> y) {
+  Vec<D> s = Add(Get2<0>(x), y);
+  Vec<D> v = Sub(s, Get2<0>(x));
+  Vec<D> w = Add(Sub(Get2<0>(x), Sub(s, v)), Sub(y, v));
+  return Create2(df, s, Add(w, Get2<1>(x)));
+}
+
 // Add ((((v0 + 1) + v2) + v3) + v4) + v5
 // Translated from common/dd.h:71 vadd_vd_6vd
 template<class D>
@@ -1419,21 +1485,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) MulDD(const D df, Vec2<D> x, Vec2<D> 
 #endif
 }
 
-// Computes x^2 in double-double precision
-// Translated from common/dd.h:204 ddsqu_vd2_vd2
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SquareDD(const D df, Vec2<D> x) {
-#if HWY_SLEEF_HAS_FMA
-  Vec<D> s = Mul(Get2<0>(x), Get2<0>(x));
-  return Create2(df, s, MulAdd(Add(Get2<0>(x), Get2<0>(x)), Get2<1>(x), MulSub(Get2<0>(x), Get2<0>(x), s)));
-#else
-  Vec<D> xh = LowerPrecision(df, Get2<0>(x)), xl = Sub(Get2<0>(x), xh);
-
-  Vec<D> s = Mul(Get2<0>(x), Get2<0>(x));
-  return Create2(df, s, Add5(df, Mul(xh, xh), Neg(s), Mul(Add(xh, xh), xl), Mul(xl, xl), Mul(Get2<0>(x), Add(Get2<1>(x), Get2<1>(x)))));
-#endif
-}
-
 // Computes x + y in double-double precision, sped up by assuming |x| > |y|
 // Translated from common/dd.h:159 ddadd_vd2_vd2_vd2
 template<class D>
@@ -1442,16 +1493,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec2<D> x, Vec2
 
   Vec<D> s = Add(Get2<0>(x), Get2<0>(y));
   return Create2(df, s, Add4(df, Sub(Get2<0>(x), s), Get2<0>(y), Get2<1>(x), Get2<1>(y)));
-}
-
-// Computes x + y in double-double precision
-// Translated from common/dd.h:140 ddadd2_vd2_vd2_vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddDD(const D df, Vec2<D> x, Vec<D> y) {
-  Vec<D> s = Add(Get2<0>(x), y);
-  Vec<D> v = Sub(s, Get2<0>(x));
-  Vec<D> w = Add(Sub(Get2<0>(x), Sub(s, v)), Sub(y, v));
-  return Create2(df, s, Add(w, Get2<1>(x)));
 }
 
 // Computes x * y in double-double precision
@@ -1467,6 +1508,21 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) MulDD(const D df, Vec2<D> x, Vec<D> y
 
   Vec<D> s = Mul(Get2<0>(x), y);
   return Create2(df, s, Add6(df, Mul(xh, yh), Neg(s), Mul(xl, yh), Mul(xh, yl), Mul(xl, yl), Mul(Get2<1>(x), y)));
+#endif
+}
+
+// Computes x^2 in double-double precision
+// Translated from common/dd.h:204 ddsqu_vd2_vd2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SquareDD(const D df, Vec2<D> x) {
+#if HWY_SLEEF_HAS_FMA
+  Vec<D> s = Mul(Get2<0>(x), Get2<0>(x));
+  return Create2(df, s, MulAdd(Add(Get2<0>(x), Get2<0>(x)), Get2<1>(x), MulSub(Get2<0>(x), Get2<0>(x), s)));
+#else
+  Vec<D> xh = LowerPrecision(df, Get2<0>(x)), xl = Sub(Get2<0>(x), xh);
+
+  Vec<D> s = Mul(Get2<0>(x), Get2<0>(x));
+  return Create2(df, s, Add5(df, Mul(xh, xh), Neg(s), Mul(Add(xh, xh), xl), Mul(xl, xl), Mul(Get2<0>(x), Add(Get2<1>(x), Get2<1>(x)))));
 #endif
 }
 
@@ -1508,20 +1564,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) ExpDD(const D df, Vec2<D> d) {
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) ScaleDD(const D df, Vec2<D> d, Vec<D> s) {
   return Create2(df, Mul(Get2<0>(d), s), Mul(Get2<1>(d), s));
-}
-
-// Integer log of x, "but the argument must be a normalized value"
-// Translated from common/commonfuncs.h:300 vilogb2k_vi_vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<RebindToSigned<D>>) ILogB2(const D df, Vec<D> d) {
-  RebindToUnsigned<D> du;
-  RebindToSigned<D> di;
-  
-  Vec<RebindToSigned<D>> q = BitCast(di, ShiftRight<32>(BitCast(du, d)));
-  q = BitCast(di, ShiftRight<20>(BitCast(du, q)));
-  q = And(q, Set(di, 0x7ff));
-  q = Sub(q, Set(di, 0x3ff));
-  return q;
 }
 
 // Sub (v0 - 1) - v2
@@ -1570,6 +1612,20 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) DivDD(const D df, Vec2<D> n, Vec2<D> 
 #endif
 }
 
+// Integer log of x, "but the argument must be a normalized value"
+// Translated from common/commonfuncs.h:300 vilogb2k_vi_vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<RebindToSigned<D>>) ILogB2(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Vec<RebindToSigned<D>> q = BitCast(di, ShiftRight<32>(BitCast(du, d)));
+  q = BitCast(di, ShiftRight<20>(BitCast(du, q)));
+  q = And(q, Set(di, 0x7ff));
+  q = Sub(q, Set(di, 0x3ff));
+  return q;
+}
+
 // Computes x + y in double-double precision
 // Translated from common/dd.h:124 ddadd2_vd2_vd_vd
 template<class D>
@@ -1579,14 +1635,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddDD(const D df, Vec<D> x, Vec<D> y)
   return Create2(df, s, Add(Sub(x, Sub(s, v)), Sub(y, v)));
 }
 
-// Computes x + y in double-double precision, sped up by assuming |x| > |y|
-// Translated from common/dd.h:130 ddadd_vd2_vd2_vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec2<D> x, Vec<D> y) {
-  Vec<D> s = Add(Get2<0>(x), y);
-  return Create2(df, s, Add3(df, Sub(Get2<0>(x), s), y, Get2<1>(x)));
-}
-
 // Sets the exponent of 'x' to 2^e. Very fast, "no denormal"
 // Translated from common/commonfuncs.h:353 vldexp3_vd_vd_vi
 template<class D>
@@ -1594,6 +1642,14 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) LoadExp3(const D df, Vec<D> d, Vec<Reb
   RebindToUnsigned<D> du;
   
   return BitCast(df, Add(BitCast(du, d), ShiftLeft<32>(BitCast(du, ShiftLeft<20>(q)))));
+}
+
+// Computes x + y in double-double precision, sped up by assuming |x| > |y|
+// Translated from common/dd.h:130 ddadd_vd2_vd2_vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) AddFastDD(const D df, Vec2<D> x, Vec<D> y) {
+  Vec<D> s = Add(Get2<0>(x), y);
+  return Create2(df, s, Add3(df, Sub(Get2<0>(x), s), y, Get2<1>(x)));
 }
 
 // Computes x + y in double-double precision
@@ -1629,22 +1685,6 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) RecDD(const D df, Vec<D> d) {
 #endif
 }
 
-// Integer log of x
-// Translated from common/commonfuncs.h:290 vilogbk_vi_vd
-template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<RebindToSigned<D>>) ILogB(const D df, Vec<D> d) {
-  RebindToUnsigned<D> du;
-  RebindToSigned<D> di;
-  
-  Mask<D> o = Lt(d, Set(df, 4.9090934652977266E-91));
-  d = IfThenElse(o, Mul(Set(df, 2.037035976334486E90), d), d);
-  Vec<RebindToSigned<D>> q = BitCast(di, ShiftRight<32>(BitCast(du, d)));
-  q = And(q, Set(di, (int)(((1U << 12) - 1) << 20)));
-  q = BitCast(di, ShiftRight<20>(BitCast(du, q)));
-  q = Sub(q, IfThenElse(RebindMask(di, o), Set(di, 300 + 0x3ff), Set(di, 0x3ff)));
-  return q;
-}
-
 // Extract the sign bit of x into an unsigned integer
 // Translated from common/commonfuncs.h:196 vsignbit_vm_vd
 template<class D>
@@ -1661,6 +1701,22 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) MulSignBit(const D df, Vec<D> x, Vec<D
   RebindToUnsigned<D> du;
   
   return BitCast(df, Xor(BitCast(du, x), SignBit(df, y)));
+}
+
+// Integer log of x
+// Translated from common/commonfuncs.h:290 vilogbk_vi_vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<RebindToSigned<D>>) ILogB(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Mask<D> o = Lt(d, Set(df, 4.9090934652977266E-91));
+  d = IfThenElse(o, Mul(Set(df, 2.037035976334486E90), d), d);
+  Vec<RebindToSigned<D>> q = BitCast(di, ShiftRight<32>(BitCast(du, d)));
+  q = And(q, Set(di, (int)(((1U << 12) - 1) << 20)));
+  q = BitCast(di, ShiftRight<20>(BitCast(du, q)));
+  q = Sub(q, IfThenElse(RebindMask(di, o), Set(di, 300 + 0x3ff), Set(di, 0x3ff)));
+  return q;
 }
 
 // Specialization of IfThenElse to double-double operands
@@ -1688,35 +1744,13 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SqrtDD(const D df, Vec2<D> d) {
   return ScaleDD(df, MulDD(df, AddDD(df, d, MulDD(df, t, t)), RecDD(df, t)), Set(df, 0.5));
 }
 
-// Computes e^x in double-double precision
-// Translated from libm/sleefsimddp.c:2322 expk
+// Create a mask of which is true if x's sign bit is set
+// Translated from common/commonfuncs.h:200 vsignbit_vo_vd
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) ExpDD_double(const D df, Vec2<D> d) {
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) SignBitMask(const D df, Vec<D> d) {
   RebindToUnsigned<D> du;
-  RebindToSigned<D> di;
   
-  Vec<D> u = Mul(Add(Get2<0>(d), Get2<1>(d)), Set(df, OneOverLn2_d));
-  Vec<D> dq = Round(u);
-  Vec<RebindToSigned<D>> q = ConvertTo(di, Round(dq));
-  Vec2<D> s, t;
-
-  s = AddDD(df, d, Mul(dq, Set(df, -Ln2Hi_d)));
-  s = AddDD(df, s, Mul(dq, Set(df, -Ln2Lo_d)));
-
-  s = NormalizeDD(df, s);
-
-  Vec<D> s2 = Mul(Get2<0>(s), Get2<0>(s)), s4 = Mul(s2, s2), s8 = Mul(s4, s4);
-  u = Estrin(Get2<0>(s), s2, s4, s8, Set(df, 0.500000000000000999200722), Set(df, 0.166666666666666740681535), Set(df, 0.0416666666665409524128449), Set(df, 0.00833333333332371417601081), Set(df, 0.0013888888939977128960529), Set(df, 0.000198412698809069797676111), Set(df, 2.48014973989819794114153e-05), Set(df, 2.75572496725023574143864e-06), Set(df, 2.76286166770270649116855e-07), Set(df, 2.51069683420950419527139e-08));
-
-  t = AddFastDD(df, Set(df, 1), s);
-  t = AddFastDD(df, t, MulDD(df, SquareDD(df, s), u));
-
-  u = Add(Get2<0>(t), Get2<1>(t));
-  u = LoadExp2(df, u, q);
-
-  u = BitCast(df, IfThenZeroElse(RebindMask(du, Lt(Get2<0>(d), Set(df, -1000))), BitCast(du, u)));
-  
-  return u;
+  return RebindMask(df, Eq(And(BitCast(du, d), BitCast(du, Set(df, -0.0))), BitCast(du, Set(df, -0.0))));
 }
 
 // Bitwise or of x with sign bit of y
@@ -1728,12 +1762,11 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) OrSignBit(const D df, Vec<D> x, Vec<D>
   return BitCast(df, Or(BitCast(du, x), SignBit(df, y)));
 }
 
-// True if d is an odd (assuming d is an integer)
-// Translated from common/commonfuncs.h:282 visodd_vo_vd
+// True if d is an integer
+// Translated from common/commonfuncs.h:278 visint_vo_vd
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) IsOdd(const D df, Vec<D> d) {
-  Vec<D> x = Mul(d, Set(df, 0.5));
-  return Ne(Round(x), x);
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) IsInt(const D df, Vec<D> d) {
+  return Eq(Round(d), d);
 }
 
 // Computes ln(x) in double-double precision (version 1)
@@ -1778,20 +1811,152 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) LogDD(const D df, Vec<D> d) {
   return s;
 }
 
-// Create a mask of which is true if x's sign bit is set
-// Translated from common/commonfuncs.h:200 vsignbit_vo_vd
+// Computes e^x in double-double precision
+// Translated from libm/sleefsimddp.c:2322 expk
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) SignBitMask(const D df, Vec<D> d) {
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) ExpDD_double(const D df, Vec2<D> d) {
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
-  return RebindMask(df, Eq(And(BitCast(du, d), BitCast(du, Set(df, -0.0))), BitCast(du, Set(df, -0.0))));
+  Vec<D> u = Mul(Add(Get2<0>(d), Get2<1>(d)), Set(df, OneOverLn2_d));
+  Vec<D> dq = Round(u);
+  Vec<RebindToSigned<D>> q = ConvertTo(di, Round(dq));
+  Vec2<D> s, t;
+
+  s = AddDD(df, d, Mul(dq, Set(df, -Ln2Hi_d)));
+  s = AddDD(df, s, Mul(dq, Set(df, -Ln2Lo_d)));
+
+  s = NormalizeDD(df, s);
+
+  Vec<D> s2 = Mul(Get2<0>(s), Get2<0>(s)), s4 = Mul(s2, s2), s8 = Mul(s4, s4);
+  u = Estrin(Get2<0>(s), s2, s4, s8, Set(df, 0.500000000000000999200722), Set(df, 0.166666666666666740681535), Set(df, 0.0416666666665409524128449), Set(df, 0.00833333333332371417601081), Set(df, 0.0013888888939977128960529), Set(df, 0.000198412698809069797676111), Set(df, 2.48014973989819794114153e-05), Set(df, 2.75572496725023574143864e-06), Set(df, 2.76286166770270649116855e-07), Set(df, 2.51069683420950419527139e-08));
+
+  t = AddFastDD(df, Set(df, 1), s);
+  t = AddFastDD(df, t, MulDD(df, SquareDD(df, s), u));
+
+  u = Add(Get2<0>(t), Get2<1>(t));
+  u = LoadExp2(df, u, q);
+
+  u = BitCast(df, IfThenZeroElse(RebindMask(du, Lt(Get2<0>(d), Set(df, -1000))), BitCast(du, u)));
+  
+  return u;
 }
 
-// True if d is an integer
-// Translated from common/commonfuncs.h:278 visint_vo_vd
+// True if d is an odd (assuming d is an integer)
+// Translated from common/commonfuncs.h:282 visodd_vo_vd
 template<class D>
-HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) IsInt(const D df, Vec<D> d) {
-  return Eq(Round(d), d);
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Mask<D>) IsOdd(const D df, Vec<D> d) {
+  Vec<D> x = Mul(d, Set(df, 0.5));
+  return Ne(Round(x), x);
+}
+
+// Helper for Payne Hanek reduction.
+// Translated from common/commonfuncs.h:423 rempisub
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) PayneHanekReductionHelper_d(const D df, Vec<D> x) {
+  RebindToSigned<D> di;
+  
+Vec<D> y = Round(Mul(x, Set(df, 4)));
+  Vec<RebindToSigned<D>> vi = ConvertTo(di, Trunc(Sub(y, Mul(Round(x), Set(df, 4)))));
+  return Create2(df, Sub(x, Mul(y, Set(df, 0.25))), BitCast(df, vi));
+
+}
+
+// Calculate Payne Hanek reduction. This appears to return ((2*x/pi) - round(2*x/pi)) * pi / 2 and the integer quadrant of x in range -2 to 2 (0 is [-pi/4, pi/4], 2/-2 are from [3pi/4, 5pi/4] with the sign flip a little after pi).
+// Translated from libm/sleefsimddp.c:348 rempi
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec3<D>) PayneHanekReduction_d(const D df, Vec<D> a) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Vec2<D> x, y;
+  Vec<RebindToSigned<D>> ex = ILogB2(df, a);
+#if HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3
+  ex = AndNot(ShiftRight<31>(ex), ex);
+  ex = And(ex, Set(di, 1023));
+#endif
+  ex = Sub(ex, Set(di, 55));
+  Vec<RebindToSigned<D>> q = IfThenElseZero(RebindMask(df, Gt(ex, Set(di, 700-55))), Set(di, -64));
+  a = LoadExp3(df, a, q);
+  ex = AndNot(ShiftRight<31>(ex), ex);
+  ex = ShiftLeft<2>(ex);
+  x = MulDD(df, a, GatherIndex(df, PayneHanekReductionTable_double, ex));
+  Vec2<D> di_ = PayneHanekReductionHelper_d(df, Get2<0>(x));
+  q = BitCast(di, Get2<1>(di_));
+  x = Set2<0>(x, Get2<0>(di_));
+  x = NormalizeDD(df, x);
+  y = MulDD(df, a, GatherIndex(df, PayneHanekReductionTable_double+1, ex));
+  x = AddDD(df, x, y);
+  di_ = PayneHanekReductionHelper_d(df, Get2<0>(x));
+  q = Add(q, BitCast(di, Get2<1>(di_)));
+  x = Set2<0>(x, Get2<0>(di_));
+  x = NormalizeDD(df, x);
+  y = Create2(df, GatherIndex(df, PayneHanekReductionTable_double+2, ex), GatherIndex(df, PayneHanekReductionTable_double+3, ex));
+  y = MulDD(df, y, a);
+  x = AddDD(df, x, y);
+  x = NormalizeDD(df, x);
+  x = MulDD(df, x, Create2(df, Set(df, 3.141592653589793116*2), Set(df, 1.2246467991473532072e-16*2)));
+  Mask<D> o = Lt(Abs(a), Set(df, 0.7));
+  x = Set2<0>(x, IfThenElse(o, a, Get2<0>(x)));
+  x = Set2<1>(x, BitCast(df, IfThenZeroElse(RebindMask(du, o), BitCast(du, Get2<1>(x)))));
+  return Create3(df, Get2<0>(x), Get2<1>(x), BitCast(df, q));
+}
+
+// Computes x * y in double-double precision, returning result as single-precision
+// Translated from common/dd.h:214 ddmul_vd_vd2_vd2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) MulDD_double(const D df, Vec2<D> x, Vec2<D> y) {
+#if HWY_SLEEF_HAS_FMA
+  return MulAdd(Get2<0>(x), Get2<0>(y), MulAdd(Get2<1>(x), Get2<0>(y), Mul(Get2<0>(x), Get2<1>(y))));
+#else
+  Vec<D> xh = LowerPrecision(df, Get2<0>(x)), xl = Sub(Get2<0>(x), xh);
+  Vec<D> yh = LowerPrecision(df, Get2<0>(y)), yl = Sub(Get2<0>(y), yh);
+
+  return Add6(df, Mul(Get2<1>(x), yh), Mul(xh, Get2<1>(y)), Mul(xl, yl), Mul(xh, yl), Mul(xl, yh), Mul(xh, yh));
+#endif
+}
+
+// Compmutes -x in double-double precision
+// Translated from common/dd.h:97 ddneg_vd2_vd2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) NegDD(const D df, Vec2<D> x) {
+  return Create2(df, Neg(Get2<0>(x)), Neg(Get2<1>(x)));
+}
+
+// Computes x - y in double-double precision, assuming |x| > |y|
+// Translated from common/dd.h:180 ddsub_vd2_vd2_vd2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SubDD(const D df, Vec2<D> x, Vec2<D> y) {
+  // |x| >= |y|
+
+  Vec<D> s = Sub(Get2<0>(x), Get2<0>(y));
+  Vec<D> t = Sub(Get2<0>(x), s);
+  t = Sub(t, Get2<0>(y));
+  t = Add(t, Get2<1>(x));
+  return Create2(df, s, Sub(t, Get2<1>(y)));
+}
+
+// Sub ((((v0 - 1) - v2) - v3) - v4) - v5
+// Translated from common/dd.h:91 vsub_vd_6vd
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Sub6(const D df, Vec<D> v0, Vec<D> v1, Vec<D> v2, Vec<D> v3, Vec<D> v4, Vec<D> v5) {
+  return Sub5(df, Sub(v0, v1), v2, v3, v4, v5);
+}
+
+// Computes 1/x in double-double precision
+// Translated from common/dd.h:232 ddrec_vd2_vd2
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) RecDD(const D df, Vec2<D> d) {
+#if HWY_SLEEF_HAS_FMA
+  Vec<D> s = Div(Set(df, 1.0), Get2<0>(d));
+  return Create2(df, s, Mul(s, NegMulAdd(Get2<1>(d), s, NegMulAdd(Get2<0>(d), s, Set(df, 1)))));
+#else
+  Vec<D> t = Div(Set(df, 1.0), Get2<0>(d));
+  Vec<D> dh = LowerPrecision(df, Get2<0>(d)), dl = Sub(Get2<0>(d), dh);
+  Vec<D> th = LowerPrecision(df, t  ), tl = Sub(t, th);
+
+  return Create2(df, t, Mul(t, Sub6(df, Set(df, 1), Mul(dh, th), Mul(dh, tl), Mul(dl, th), Mul(dl, tl), Mul(Get2<1>(d), t))));
+#endif
 }
 
 }
@@ -2432,7 +2597,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Sin(const D df, Vec<D> d) {
   v = MulAdd(u, Set(df, -PiA2f), d);
   s = AddDF(df, v, Mul(u, Set(df, -PiB2f)));
   s = AddFastDF(df, s, Mul(u, Set(df, -PiC2f)));
-  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
+  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2f));
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
     Vec3<D> dfi = PayneHanekReduction(df, d);
@@ -2485,7 +2650,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Cos(const D df, Vec<D> d) {
   s = AddDF(df, d, Mul(dq, Set(df, -PiA2f*0.5f)));
   s = AddDF(df, s, Mul(dq, Set(df, -PiB2f*0.5f)));
   s = AddDF(df, s, Mul(dq, Set(df, -PiC2f*0.5f)));
-  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
+  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2f));
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
     Vec3<D> dfi = PayneHanekReduction(df, d);
@@ -2538,7 +2703,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Tan(const D df, Vec<D> d) {
   v = MulAdd(u, Set(df, -PiA2f*0.5f), d);
   s = AddDF(df, v, Mul(u, Set(df, -PiB2f*0.5f)));
   s = AddFastDF(df, s, Mul(u, Set(df, -PiC2f*0.5f)));
-  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
+  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2f));
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
     Vec3<D> dfi = PayneHanekReduction(df, d);
@@ -2593,7 +2758,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) SinFast(const D df, Vec<D> d) {
   d = MulAdd(u, Set(df, -PiA2f), d);
   d = MulAdd(u, Set(df, -PiB2f), d);
   d = MulAdd(u, Set(df, -PiC2f), d);
-  Mask<D> g = Lt(Abs(r), Set(df, TrigRangeMax2));
+  Mask<D> g = Lt(Abs(r), Set(df, TrigRangeMax2f));
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
     s = ConvertTo(df, q);
@@ -2603,7 +2768,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) SinFast(const D df, Vec<D> d) {
     u = MulAdd(s, Set(df, -PiDf), u);
 
     d = IfThenElse(g, d, u);
-    g = Lt(Abs(r), Set(df, TrigRangeMax));
+    g = Lt(Abs(r), Set(df, TrigRangeMaxf));
 
     if (!HWY_LIKELY(AllTrue(df, g))) {
       Vec3<D> dfi = PayneHanekReduction(df, r);
@@ -2655,7 +2820,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) CosFast(const D df, Vec<D> d) {
   d = MulAdd(u, Set(df, -PiA2f*0.5f), d);
   d = MulAdd(u, Set(df, -PiB2f*0.5f), d);
   d = MulAdd(u, Set(df, -PiC2f*0.5f), d);
-  Mask<D> g = Lt(Abs(r), Set(df, TrigRangeMax2));
+  Mask<D> g = Lt(Abs(r), Set(df, TrigRangeMax2f));
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
     s = ConvertTo(df, q);
@@ -2665,7 +2830,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) CosFast(const D df, Vec<D> d) {
     u = MulAdd(s, Set(df, -PiDf*0.5f), u);
 
     d = IfThenElse(g, d, u);
-    g = Lt(Abs(r), Set(df, TrigRangeMax));
+    g = Lt(Abs(r), Set(df, TrigRangeMaxf));
 
     if (!HWY_LIKELY(AllTrue(df, g))) {
       Vec3<D> dfi = PayneHanekReduction(df, r);
@@ -2716,7 +2881,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) TanFast(const D df, Vec<D> d) {
   x = MulAdd(u, Set(df, -PiA2f*0.5f), d);
   x = MulAdd(u, Set(df, -PiB2f*0.5f), x);
   x = MulAdd(u, Set(df, -PiC2f*0.5f), x);
-  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2*0.5f));
+  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2f*0.5f));
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
     Vec<RebindToSigned<D>> q2 = NearestInt(Mul(d, Set(df, (float)(2 * OneOverPi))));
@@ -2728,7 +2893,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) TanFast(const D df, Vec<D> d) {
 
     q = IfThenElse(RebindMask(di, g), q, q2);
     x = IfThenElse(g, x, u);
-    g = Lt(Abs(d), Set(df, TrigRangeMax));
+    g = Lt(Abs(d), Set(df, TrigRangeMaxf));
 
     if (!HWY_LIKELY(AllTrue(df, g))) {
       Vec3<D> dfi = PayneHanekReduction(df, d);
@@ -3672,6 +3837,467 @@ Mask<D> yisint = IsInt(df, y);
 
   return result;
 
+}
+
+// Computes sin(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:521 xsin_u1
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Sin(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Vec<D> u;
+  Vec2<D> s, t, x;
+  Vec<RebindToSigned<D>> ql;
+
+  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
+  Vec<D> dql = Round(Mul(d, Set(df, OneOverPi)));
+  ql = ConvertTo(di, Round(dql));
+  u = MulAdd(dql, Set(df, -PiA2), d);
+  x = AddFastDD(df, u, Mul(dql, Set(df, -PiB2)));
+
+  if (!HWY_LIKELY(AllTrue(df, g))) {
+    Vec<D> dqh = Trunc(Mul(d, Set(df, OneOverPi / (1 << 24))));
+    dqh = Mul(dqh, Set(df, 1 << 24));
+    const Vec<D> dql = Round(MulSub(d, Set(df, OneOverPi), dqh));
+
+    u = MulAdd(dqh, Set(df, -PiA), d);
+    s = AddFastDD(df, u, Mul(dql, Set(df, -PiA)));
+    s = AddDD(df, s, Mul(dqh, Set(df, -PiB)));
+    s = AddDD(df, s, Mul(dql, Set(df, -PiB)));
+    s = AddDD(df, s, Mul(dqh, Set(df, -PiC)));
+    s = AddDD(df, s, Mul(dql, Set(df, -PiC)));
+    s = AddFastDD(df, s, Mul(Add(dqh, dql), Set(df, -PiD)));
+
+    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    x = IfThenElse(df, g, x, s);
+    g = Lt(Abs(d), Set(df, TrigRangeMax));
+
+    if (!HWY_LIKELY(AllTrue(df, g))) {
+      Vec3<D> ddi = PayneHanekReduction_d(df, d);
+      Vec<RebindToSigned<D>> ql2 = And(BitCast(di, Get3<2>(ddi)), Set(di, 3));
+      ql2 = Add(Add(ql2, ql2), IfThenElse(RebindMask(di, Gt(Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))), Set(df, 0))), Set(di, 2), Set(di, 1)));
+      ql2 = ShiftRight<2>(ql2);
+      Mask<D> o = RebindMask(df, Eq(And(BitCast(di, Get3<2>(ddi)), Set(di, 1)), Set(di, 1)));
+      Vec2<D> t = Create2(df, MulSignBit(df, Set(df, -3.141592653589793116 * 0.5), Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi)))), MulSignBit(df, Set(df, -1.2246467991473532072e-16 * 0.5), Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi)))));
+      t = AddDD(df, Create2(df, Get3<0>(ddi), Get3<1>(ddi)), t);
+      ddi = Set3<0>(Set3<1>(ddi, Get2<1>(IfThenElse(df, o, t, Create2(df, Get3<0>(ddi), Get3<1>(ddi))))), Get2<0>(IfThenElse(df, o, t, Create2(df, Get3<0>(ddi), Get3<1>(ddi)))));
+      s = NormalizeDD(df, Create2(df, Get3<0>(ddi), Get3<1>(ddi)));
+      ql = IfThenElse(RebindMask(di, g), ql, ql2);
+      x = IfThenElse(df, g, x, s);
+      x = Set2<0>(x, BitCast(df, IfThenElse(RebindMask(du, Or(IsInf(d), IsNaN(d))), Set(du, -1), BitCast(du, Get2<0>(x)))));
+    }
+  }
+  
+  t = x;
+  s = SquareDD(df, x);
+
+  Vec<D> s2 = Mul(Get2<0>(s), Get2<0>(s)), s4 = Mul(s2, s2);
+  u = Estrin(Get2<0>(s), s2, s4, Set(df, -0.000198412698412046454654947), Set(df, 2.75573192104428224777379e-06), Set(df, -2.5052106814843123359368e-08), Set(df, 1.60589370117277896211623e-10), Set(df, -7.6429259411395447190023e-13), Set(df, 2.72052416138529567917983e-15));
+  u = MulAdd(u, Get2<0>(s), Set(df, 0.00833333333333318056201922));
+
+  x = AddFastDD(df, Set(df, 1), MulDD(df, AddFastDD(df, Set(df, -0.166666666666666657414808), Mul(u, Get2<0>(s))), s));
+  u = MulDD_double(df, t, x);
+
+  u = BitCast(df, Xor(IfThenElseZero(RebindMask(du, RebindMask(df, Eq(And(ql, Set(di, 1)), Set(di, 1)))), BitCast(du, Set(df, -0.0))), BitCast(du, u)));
+
+  u = IfThenElse(Eq(d, Set(df, 0)), d, u);
+  
+  return u; // #if !defined(DETERMINISTIC)
+}
+
+// Computes cos(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:787 xcos_u1
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Cos(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Vec<D> u;
+  Vec2<D> s, t, x;
+  Vec<RebindToSigned<D>> ql;
+
+  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
+  Vec<D> dql = Round(MulAdd(d, Set(df, OneOverPi), Set(df, -0.5)));
+  dql = MulAdd(Set(df, 2), dql, Set(df, 1));
+  ql = ConvertTo(di, Round(dql));
+  x = AddDD(df, d, Mul(dql, Set(df, -PiA2*0.5)));
+  x = AddFastDD(df, x, Mul(dql, Set(df, -PiB2*0.5)));
+
+  if (!HWY_LIKELY(AllTrue(df, g))) {
+    Vec<D> dqh = Trunc(MulAdd(d, Set(df, OneOverPi / (1 << 23)), Set(df, -OneOverPi / (1 << 24))));
+    Vec<RebindToSigned<D>> ql2 = ConvertTo(di, Round(Add(Mul(d, Set(df, OneOverPi)), MulAdd(dqh, Set(df, -(1 << 23)), Set(df, -0.5)))));
+    dqh = Mul(dqh, Set(df, 1 << 24));
+    ql2 = Add(Add(ql2, ql2), Set(di, 1));
+    const Vec<D> dql = ConvertTo(df, ql2);
+
+    u = MulAdd(dqh, Set(df, -PiA * 0.5), d);
+    s = AddDD(df, u, Mul(dql, Set(df, -PiA*0.5)));
+    s = AddDD(df, s, Mul(dqh, Set(df, -PiB*0.5)));
+    s = AddDD(df, s, Mul(dql, Set(df, -PiB*0.5)));
+    s = AddDD(df, s, Mul(dqh, Set(df, -PiC*0.5)));
+    s = AddDD(df, s, Mul(dql, Set(df, -PiC*0.5)));
+    s = AddFastDD(df, s, Mul(Add(dqh, dql), Set(df, -PiD*0.5)));
+
+    ql = IfThenElse(RebindMask(di, g), ql, ql2);
+    x = IfThenElse(df, g, x, s);
+    g = Lt(Abs(d), Set(df, TrigRangeMax));
+
+    if (!HWY_LIKELY(AllTrue(df, g))) {
+      Vec3<D> ddi = PayneHanekReduction_d(df, d);
+      Vec<RebindToSigned<D>> ql2 = And(BitCast(di, Get3<2>(ddi)), Set(di, 3));
+      ql2 = Add(Add(ql2, ql2), IfThenElse(RebindMask(di, Gt(Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))), Set(df, 0))), Set(di, 8), Set(di, 7)));
+      ql2 = ShiftRight<1>(ql2);
+      Mask<D> o = RebindMask(df, Eq(And(BitCast(di, Get3<2>(ddi)), Set(di, 1)), Set(di, 0)));
+      Vec<D> y = IfThenElse(Gt(Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))), Set(df, 0)), Set(df, 0), Set(df, -1));
+      Vec2<D> t = Create2(df, MulSignBit(df, Set(df, -3.141592653589793116 * 0.5), y), MulSignBit(df, Set(df, -1.2246467991473532072e-16 * 0.5), y));
+      t = AddDD(df, Create2(df, Get3<0>(ddi), Get3<1>(ddi)), t);
+      ddi = Set3<0>(Set3<1>(ddi, Get2<1>(IfThenElse(df, o, t, Create2(df, Get3<0>(ddi), Get3<1>(ddi))))), Get2<0>(IfThenElse(df, o, t, Create2(df, Get3<0>(ddi), Get3<1>(ddi)))));
+      s = NormalizeDD(df, Create2(df, Get3<0>(ddi), Get3<1>(ddi)));
+      ql = IfThenElse(RebindMask(di, g), ql, ql2);
+      x = IfThenElse(df, g, x, s);
+      x = Set2<0>(x, BitCast(df, IfThenElse(RebindMask(du, Or(IsInf(d), IsNaN(d))), Set(du, -1), BitCast(du, Get2<0>(x)))));
+    }
+  }
+  
+  t = x;
+  s = SquareDD(df, x);
+
+  Vec<D> s2 = Mul(Get2<0>(s), Get2<0>(s)), s4 = Mul(s2, s2);
+  u = Estrin(Get2<0>(s), s2, s4, Set(df, -0.000198412698412046454654947), Set(df, 2.75573192104428224777379e-06), Set(df, -2.5052106814843123359368e-08), Set(df, 1.60589370117277896211623e-10), Set(df, -7.6429259411395447190023e-13), Set(df, 2.72052416138529567917983e-15));
+  u = MulAdd(u, Get2<0>(s), Set(df, 0.00833333333333318056201922));
+
+  x = AddFastDD(df, Set(df, 1), MulDD(df, AddFastDD(df, Set(df, -0.166666666666666657414808), Mul(u, Get2<0>(s))), s));
+  u = MulDD_double(df, t, x);
+  
+  u = BitCast(df, Xor(IfThenElseZero(RebindMask(du, RebindMask(df, Eq(And(ql, Set(di, 2)), Set(di, 0)))), BitCast(du, Set(df, -0.0))), BitCast(du, u)));
+  
+  return u; // #if !defined(DETERMINISTIC)
+}
+
+// Computes tan(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:1645 xtan_u1
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Tan(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Vec<D> u;
+  Vec2<D> s, t, x, y;
+  Mask<D> o;
+  Vec<RebindToSigned<D>> ql;
+  
+  const Vec<D> dql = Round(Mul(d, Set(df, 2 * OneOverPi)));
+  ql = ConvertTo(di, Round(dql));
+  u = MulAdd(dql, Set(df, -PiA2*0.5), d);
+  s = AddFastDD(df, u, Mul(dql, Set(df, -PiB2*0.5)));
+  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
+
+  if (!HWY_LIKELY(AllTrue(df, g))) {
+    Vec<D> dqh = Trunc(Mul(d, Set(df, 2*OneOverPi / (1 << 24))));
+    dqh = Mul(dqh, Set(df, 1 << 24));
+    x = AddDD(df, MulDD(df, Create2(df, Set(df, TwoOverPiH), Set(df, TwoOverPiL)), d),
+			  Sub(IfThenElse(Lt(d, Set(df, 0)), Set(df, -0.5), Set(df, 0.5)), dqh));
+    const Vec<D> dql = Trunc(Add(Get2<0>(x), Get2<1>(x)));
+
+    u = MulAdd(dqh, Set(df, -PiA * 0.5), d);
+    x = AddFastDD(df, u, Mul(dql, Set(df, -PiA*0.5)));
+    x = AddDD(df, x, Mul(dqh, Set(df, -PiB*0.5)));
+    x = AddDD(df, x, Mul(dql, Set(df, -PiB*0.5)));
+    x = AddDD(df, x, Mul(dqh, Set(df, -PiC*0.5)));
+    x = AddDD(df, x, Mul(dql, Set(df, -PiC*0.5)));
+    x = AddFastDD(df, x, Mul(Add(dqh, dql), Set(df, -PiD*0.5)));
+
+    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    s = IfThenElse(df, g, s, x);
+    g = Lt(Abs(d), Set(df, TrigRangeMax));
+
+    if (!HWY_LIKELY(AllTrue(df, g))) {
+      Vec3<D> ddi = PayneHanekReduction_d(df, d);
+      x = Create2(df, Get3<0>(ddi), Get3<1>(ddi));
+      o = Or(IsInf(d), IsNaN(d));
+      x = Set2<0>(x, BitCast(df, IfThenElse(RebindMask(du, o), Set(du, -1), BitCast(du, Get2<0>(x)))));
+      x = Set2<1>(x, BitCast(df, IfThenElse(RebindMask(du, o), Set(du, -1), BitCast(du, Get2<1>(x)))));
+
+      ql = IfThenElse(RebindMask(di, g), ql, BitCast(di, Get3<2>(ddi)));
+      s = IfThenElse(df, g, s, x);
+    }
+  }
+  
+  t = ScaleDD(df, s, Set(df, 0.5));
+  s = SquareDD(df, t);
+
+  Vec<D> s2 = Mul(Get2<0>(s), Get2<0>(s)), s4 = Mul(s2, s2);
+  u = Estrin(Get2<0>(s), s2, s4, Set(df, +0.1333333333330500581e+0), Set(df, +0.5396825399517272970e-1), Set(df, +0.2186948728185535498e-1), Set(df, +0.8863268409563113126e-2), Set(df, +0.3591611540792499519e-2), Set(df, +0.1460781502402784494e-2), Set(df, +0.5619219738114323735e-3), Set(df, +0.3245098826639276316e-3));
+
+  u = MulAdd(u, Get2<0>(s), Set(df, +0.3333333333333343695e+0));
+  x = AddFastDD(df, t, MulDD(df, MulDD(df, s, t), u));
+
+  y = AddFastDD(df, Set(df, -1), SquareDD(df, x));
+  x = ScaleDD(df, x, Set(df, -2));
+
+  o = RebindMask(df, Eq(And(ql, Set(di, 1)), Set(di, 1)));
+
+  x = DivDD(df, IfThenElse(df, o, NegDD(df, y), x),
+			IfThenElse(df, o, x, y));
+
+  u = Add(Get2<0>(x), Get2<1>(x));
+
+  u = IfThenElse(Eq(d, Set(df, 0)), d, u);
+
+  return u; // #if !defined(DETERMINISTIC)
+}
+
+// Computes sin(x) with 3.5 ULP accuracy
+// Translated from libm/sleefsimddp.c:382 xsin
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) SinFast(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+// This is the deterministic implementation of sin function. Returned
+// values from deterministic functions are bitwise consistent across
+// all platforms. The function name xsin will be renamed to
+// Sleef_cinz_sind2_u35sse2 with renamesse2.h, for example. The
+// renaming by rename*.h is switched according to DETERMINISTIC macro.
+  Vec<D> u, s, r = d;
+  Vec<RebindToSigned<D>> ql;
+
+  Vec<D> dql = Round(Mul(d, Set(df, OneOverPi)));
+  ql = ConvertTo(di, Round(dql));
+  d = MulAdd(dql, Set(df, -PiA2), d);
+  d = MulAdd(dql, Set(df, -PiB2), d);
+  Mask<D> g = Lt(Abs(r), Set(df, TrigRangeMax2));
+
+  if (!HWY_LIKELY(AllTrue(df, g))) {
+    Vec<D> dqh = Trunc(Mul(r, Set(df, OneOverPi / (1 << 24))));
+    dqh = Mul(dqh, Set(df, 1 << 24));
+    Vec<D> dql = Round(MulSub(r, Set(df, OneOverPi), dqh));
+
+    u = MulAdd(dqh, Set(df, -PiA), r);
+    u = MulAdd(dql, Set(df, -PiA), u);
+    u = MulAdd(dqh, Set(df, -PiB), u);
+    u = MulAdd(dql, Set(df, -PiB), u);
+    u = MulAdd(dqh, Set(df, -PiC), u);
+    u = MulAdd(dql, Set(df, -PiC), u);
+    u = MulAdd(Add(dqh, dql), Set(df, -PiD), u);
+
+    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    d = IfThenElse(g, d, u);
+    g = Lt(Abs(r), Set(df, TrigRangeMax));
+
+    if (!HWY_LIKELY(AllTrue(df, g))) {
+      Vec3<D> ddi = PayneHanekReduction_d(df, r);
+      Vec<RebindToSigned<D>> ql2 = And(BitCast(di, Get3<2>(ddi)), Set(di, 3));
+      ql2 = Add(Add(ql2, ql2), IfThenElse(RebindMask(di, Gt(Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))), Set(df, 0))), Set(di, 2), Set(di, 1)));
+      ql2 = ShiftRight<2>(ql2);
+      Mask<D> o = RebindMask(df, Eq(And(BitCast(di, Get3<2>(ddi)), Set(di, 1)), Set(di, 1)));
+      Vec2<D> x = Create2(df, MulSignBit(df, Set(df, -3.141592653589793116 * 0.5), Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi)))), MulSignBit(df, Set(df, -1.2246467991473532072e-16 * 0.5), Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi)))));
+      x = AddDD(df, Create2(df, Get3<0>(ddi), Get3<1>(ddi)), x);
+      ddi = Set3<0>(Set3<1>(ddi, Get2<1>(IfThenElse(df, o, x, Create2(df, Get3<0>(ddi), Get3<1>(ddi))))), Get2<0>(IfThenElse(df, o, x, Create2(df, Get3<0>(ddi), Get3<1>(ddi)))));
+      u = Add(Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))), Get2<1>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))));
+      ql = IfThenElse(RebindMask(di, g), ql, ql2);
+      d = IfThenElse(g, d, u);
+      d = BitCast(df, IfThenElse(RebindMask(du, Or(IsInf(r), IsNaN(r))), Set(du, -1), BitCast(du, d)));
+    }
+  }
+
+  s = Mul(d, d);
+
+  d = BitCast(df, Xor(IfThenElseZero(RebindMask(du, RebindMask(df, Eq(And(ql, Set(di, 1)), Set(di, 1)))), BitCast(du, Set(df, -0.0))), BitCast(du, d)));
+
+  Vec<D> s2 = Mul(s, s), s4 = Mul(s2, s2);
+  u = Estrin(s, s2, s4, Set(df, 0.00833333333333332974823815), Set(df, -0.000198412698412696162806809), Set(df, 2.75573192239198747630416e-06), Set(df, -2.50521083763502045810755e-08), Set(df, 1.60590430605664501629054e-10), Set(df, -7.64712219118158833288484e-13), Set(df, 2.81009972710863200091251e-15), Set(df, -7.97255955009037868891952e-18));
+  u = MulAdd(u, s, Set(df, -0.166666666666666657414808));
+
+  u = Add(Mul(s, Mul(u, d)), d);
+
+  u = IfThenElse(Eq(r, Set(df, -0.0)), r, u);
+  
+  return u; // #if !defined(DETERMINISTIC)
+}
+
+// Computes cos(x) with 3.5 ULP accuracy
+// Translated from libm/sleefsimddp.c:652 xcos
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) CosFast(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Vec<D> u, s, r = d;
+  Vec<RebindToSigned<D>> ql;
+
+  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
+  Vec<D> dql = MulAdd(Set(df, 2), Round(MulAdd(d, Set(df, OneOverPi), Set(df, -0.5))), Set(df, 1));
+  ql = ConvertTo(di, Round(dql));
+  d = MulAdd(dql, Set(df, -PiA2 * 0.5), d);
+  d = MulAdd(dql, Set(df, -PiB2 * 0.5), d);
+
+  if (!HWY_LIKELY(AllTrue(df, g))) {
+    Vec<D> dqh = Trunc(MulAdd(r, Set(df, OneOverPi / (1 << 23)), Set(df, -OneOverPi / (1 << 24))));
+    Vec<RebindToSigned<D>> ql2 = ConvertTo(di, Round(Add(Mul(r, Set(df, OneOverPi)), MulAdd(dqh, Set(df, -(1 << 23)), Set(df, -0.5)))));
+    dqh = Mul(dqh, Set(df, 1 << 24));
+    ql2 = Add(Add(ql2, ql2), Set(di, 1));
+    Vec<D> dql = ConvertTo(df, ql2);
+
+    u = MulAdd(dqh, Set(df, -PiA * 0.5), r);
+    u = MulAdd(dql, Set(df, -PiA * 0.5), u);
+    u = MulAdd(dqh, Set(df, -PiB * 0.5), u);
+    u = MulAdd(dql, Set(df, -PiB * 0.5), u);
+    u = MulAdd(dqh, Set(df, -PiC * 0.5), u);
+    u = MulAdd(dql, Set(df, -PiC * 0.5), u);
+    u = MulAdd(Add(dqh, dql), Set(df, -PiD * 0.5), u);
+
+    ql = IfThenElse(RebindMask(di, g), ql, ql2);
+    d = IfThenElse(g, d, u);
+    g = Lt(Abs(r), Set(df, TrigRangeMax));
+
+    if (!HWY_LIKELY(AllTrue(df, g))) {
+      Vec3<D> ddi = PayneHanekReduction_d(df, r);
+      Vec<RebindToSigned<D>> ql2 = And(BitCast(di, Get3<2>(ddi)), Set(di, 3));
+      ql2 = Add(Add(ql2, ql2), IfThenElse(RebindMask(di, Gt(Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))), Set(df, 0))), Set(di, 8), Set(di, 7)));
+      ql2 = ShiftRight<1>(ql2);
+      Mask<D> o = RebindMask(df, Eq(And(BitCast(di, Get3<2>(ddi)), Set(di, 1)), Set(di, 0)));
+      Vec<D> y = IfThenElse(Gt(Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))), Set(df, 0)), Set(df, 0), Set(df, -1));
+      Vec2<D> x = Create2(df, MulSignBit(df, Set(df, -3.141592653589793116 * 0.5), y), MulSignBit(df, Set(df, -1.2246467991473532072e-16 * 0.5), y));
+      x = AddDD(df, Create2(df, Get3<0>(ddi), Get3<1>(ddi)), x);
+      ddi = Set3<0>(Set3<1>(ddi, Get2<1>(IfThenElse(df, o, x, Create2(df, Get3<0>(ddi), Get3<1>(ddi))))), Get2<0>(IfThenElse(df, o, x, Create2(df, Get3<0>(ddi), Get3<1>(ddi)))));
+      u = Add(Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))), Get2<1>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))));
+      ql = IfThenElse(RebindMask(di, g), ql, ql2);
+      d = IfThenElse(g, d, u);
+      d = BitCast(df, IfThenElse(RebindMask(du, Or(IsInf(r), IsNaN(r))), Set(du, -1), BitCast(du, d)));
+    }
+  }
+
+  s = Mul(d, d);
+
+  d = BitCast(df, Xor(IfThenElseZero(RebindMask(du, RebindMask(df, Eq(And(ql, Set(di, 2)), Set(di, 0)))), BitCast(du, Set(df, -0.0))), BitCast(du, d)));
+
+  Vec<D> s2 = Mul(s, s), s4 = Mul(s2, s2);
+  u = Estrin(s, s2, s4, Set(df, 0.00833333333333332974823815), Set(df, -0.000198412698412696162806809), Set(df, 2.75573192239198747630416e-06), Set(df, -2.50521083763502045810755e-08), Set(df, 1.60590430605664501629054e-10), Set(df, -7.64712219118158833288484e-13), Set(df, 2.81009972710863200091251e-15), Set(df, -7.97255955009037868891952e-18));
+  u = MulAdd(u, s, Set(df, -0.166666666666666657414808));
+
+  u = Add(Mul(s, Mul(u, d)), d);
+  
+  return u; // #if !defined(DETERMINISTIC)
+}
+
+// Computes tan(x) with 3.5 ULP accuracy
+// Translated from libm/sleefsimddp.c:1517 xtan
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) TanFast(const D df, Vec<D> d) {
+  RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
+  
+  Vec<D> u, s, x, y;
+  Mask<D> o;
+  Vec<RebindToSigned<D>> ql;
+
+  Vec<D> dql = Round(Mul(d, Set(df, 2 * OneOverPi)));
+  ql = ConvertTo(di, Round(dql));
+  s = MulAdd(dql, Set(df, -PiA2 * 0.5), d);
+  s = MulAdd(dql, Set(df, -PiB2 * 0.5), s);
+  Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
+
+  if (!HWY_LIKELY(AllTrue(df, g))) {
+    Vec<D> dqh = Trunc(Mul(d, Set(df, 2*OneOverPi / (1 << 24))));
+    dqh = Mul(dqh, Set(df, 1 << 24));
+    Vec<D> dql = Round(Sub(Mul(d, Set(df, 2*OneOverPi)), dqh));
+
+    u = MulAdd(dqh, Set(df, -PiA * 0.5), d);
+    u = MulAdd(dql, Set(df, -PiA * 0.5), u);
+    u = MulAdd(dqh, Set(df, -PiB * 0.5), u);
+    u = MulAdd(dql, Set(df, -PiB * 0.5), u);
+    u = MulAdd(dqh, Set(df, -PiC * 0.5), u);
+    u = MulAdd(dql, Set(df, -PiC * 0.5), u);
+    u = MulAdd(Add(dqh, dql), Set(df, -PiD * 0.5), u);
+
+    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    s = IfThenElse(g, s, u);
+    g = Lt(Abs(d), Set(df, 1e+6));
+
+    if (!HWY_LIKELY(AllTrue(df, g))) {
+      Vec3<D> ddi = PayneHanekReduction_d(df, d);
+      Vec<RebindToSigned<D>> ql2 = BitCast(di, Get3<2>(ddi));
+      u = Add(Get2<0>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))), Get2<1>(Create2(df, Get3<0>(ddi), Get3<1>(ddi))));
+      u = BitCast(df, IfThenElse(RebindMask(du, Or(IsInf(d), IsNaN(d))), Set(du, -1), BitCast(du, u)));
+
+      ql = IfThenElse(RebindMask(di, g), ql, ql2);
+      s = IfThenElse(g, s, u);
+    }
+  }
+
+  x = Mul(s, Set(df, 0.5));
+  s = Mul(x, x);
+
+  Vec<D> s2 = Mul(s, s), s4 = Mul(s2, s2);
+  u = Estrin(s, s2, s4, Set(df, +0.1333333333330500581e+0), Set(df, +0.5396825399517272970e-1), Set(df, +0.2186948728185535498e-1), Set(df, +0.8863268409563113126e-2), Set(df, +0.3591611540792499519e-2), Set(df, +0.1460781502402784494e-2), Set(df, +0.5619219738114323735e-3), Set(df, +0.3245098826639276316e-3));
+
+  u = MulAdd(u, s, Set(df, +0.3333333333333343695e+0));
+  u = MulAdd(s, Mul(u, x), x);
+
+  y = MulAdd(u, u, Set(df, -1));
+  x = Mul(u, Set(df, -2));
+
+  o = RebindMask(df, Eq(And(ql, Set(di, 1)), Set(di, 1)));
+  u = Div(IfThenElse(o, Neg(y), x), IfThenElse(o, x, y));
+  u = IfThenElse(Eq(d, Set(df, 0)), d, u);
+  
+  return u; // #if !defined(DETERMINISTIC)
+}
+
+// Computes sinh(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:2435 xsinh
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Sinh(const D df, Vec<D> x) {
+  RebindToUnsigned<D> du;
+  
+  Vec<D> y = Abs(x);
+  Vec2<D> d = ExpDD(df, Create2(df, y, Set(df, 0)));
+  d = SubDD(df, d, RecDD(df, d));
+  y = Mul(Add(Get2<0>(d), Get2<1>(d)), Set(df, 0.5));
+
+  y = IfThenElse(Or(Gt(Abs(x), Set(df, 710)), IsNaN(y)), Set(df, InfDouble), y);
+  y = MulSignBit(df, y, x);
+  y = BitCast(df, IfThenElse(RebindMask(du, IsNaN(x)), Set(du, -1), BitCast(du, y)));
+
+  return y;
+}
+
+// Computes cosh(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:2448 xcosh
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Cosh(const D df, Vec<D> x) {
+  RebindToUnsigned<D> du;
+  
+  Vec<D> y = Abs(x);
+  Vec2<D> d = ExpDD(df, Create2(df, y, Set(df, 0)));
+  d = AddFastDD(df, d, RecDD(df, d));
+  y = Mul(Add(Get2<0>(d), Get2<1>(d)), Set(df, 0.5));
+
+  y = IfThenElse(Or(Gt(Abs(x), Set(df, 710)), IsNaN(y)), Set(df, InfDouble), y);
+  y = BitCast(df, IfThenElse(RebindMask(du, IsNaN(x)), Set(du, -1), BitCast(du, y)));
+
+  return y;
+}
+
+// Computes tanh(x) with 1.0 ULP accuracy
+// Translated from libm/sleefsimddp.c:2460 xtanh
+template<class D>
+HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Tanh(const D df, Vec<D> x) {
+  RebindToUnsigned<D> du;
+  
+  Vec<D> y = Abs(x);
+  Vec2<D> d = ExpDD(df, Create2(df, y, Set(df, 0)));
+  Vec2<D> e = RecDD(df, d);
+  d = DivDD(df, AddDD(df, d, NegDD(df, e)), AddDD(df, d, e));
+  y = Add(Get2<0>(d), Get2<1>(d));
+
+  y = IfThenElse(Or(Gt(Abs(x), Set(df, 18.714973875)), IsNaN(y)), Set(df, 1.0), y);
+  y = MulSignBit(df, y, x);
+  y = BitCast(df, IfThenElse(RebindMask(du, IsNaN(x)), Set(du, -1), BitCast(du, y)));
+
+  return y;
 }
 
 }  // namespace sleef

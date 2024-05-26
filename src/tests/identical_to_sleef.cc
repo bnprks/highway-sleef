@@ -21,6 +21,7 @@
 #include <cmath>   // std::abs
 #include <limits>
 #include <memory>
+#include <iostream>
 
 #include "define_dispatchers.h"
 
@@ -34,12 +35,13 @@
 #include "hwy/tests/test_util.h"
 // clang-format on
 
+template <typename real>
 void FindMismatches(const char *name,
-                    void (*sleef_fun)(const float *, size_t,
-                                      float *__restrict__),
-                    void (*translate_fun)(const float *, size_t,
-                                          float *__restrict__)) {
-  hwy::ThreadPool pool(4);
+                    void (*sleef_fun)(const real *, size_t,
+                                      real *__restrict__),
+                    void (*translate_fun)(const real *, size_t,
+                                          real *__restrict__)) {
+  hwy::ThreadPool pool(48);
 
   // Compare highway, sleef-native, and translated functions on all floats
   constexpr size_t TASK_SIZE = 1 << 24;   // Count of values per task
@@ -58,9 +60,9 @@ void FindMismatches(const char *name,
 
   auto run_task = [=, &mismatches, &quit_early](uint32_t task,
                                                 uint32_t thread) {
-    auto out1 = hwy::AllocateAligned<float>(CHUNK_SIZE);
-    auto out2 = hwy::AllocateAligned<float>(CHUNK_SIZE);
-    auto input = hwy::AllocateAligned<float>(CHUNK_SIZE);
+    auto out1 = hwy::AllocateAligned<real>(CHUNK_SIZE);
+    auto out2 = hwy::AllocateAligned<real>(CHUNK_SIZE);
+    auto input = hwy::AllocateAligned<real>(CHUNK_SIZE);
     bool mismatched_nan = false;
 
     if (quit_early) return;
@@ -68,7 +70,7 @@ void FindMismatches(const char *name,
     for (size_t i = task * TASK_SIZE; i < (task + 1) * TASK_SIZE;
          i += CHUNK_SIZE) {
       for (size_t j = 0; j < CHUNK_SIZE; j++) {
-        input[j] = hwy::BitCastScalar<float>(static_cast<uint32_t>(i + j));
+        input[j] = hwy::BitCastScalar<real>(static_cast<uint32_t>(i + j));
       }
       sleef_fun(input.get(), CHUNK_SIZE, out1.get());
       translate_fun(input.get(), CHUNK_SIZE, out2.get());
@@ -108,9 +110,9 @@ void FindMismatches(const char *name,
       printf(
           "%s: found mismatch: in = %f (0x%x), sleef = %f (0x%x) vs. "
           "translated = %f (0x%x)\n",
-          name, hwy::BitCastScalar<float>(m.input), m.input,
-          hwy::BitCastScalar<float>(m.sleef_out), m.sleef_out,
-          hwy::BitCastScalar<float>(m.translate_out), m.translate_out);
+          name, hwy::BitCastScalar<real>(m.input), m.input,
+          hwy::BitCastScalar<real>(m.sleef_out), m.sleef_out,
+          hwy::BitCastScalar<real>(m.translate_out), m.translate_out);
       return;
     }
   }
@@ -120,9 +122,9 @@ void FindMismatches(const char *name,
       printf(
           "%s: found nan-mismatch: in = %f (0x%x), sleef = %f (0x%x) vs. "
           "translated = %f (0x%x)\n",
-          name, hwy::BitCastScalar<float>(m.input), m.input,
-          hwy::BitCastScalar<float>(m.sleef_out), m.sleef_out,
-          hwy::BitCastScalar<float>(m.translate_out), m.translate_out);
+          name, hwy::BitCastScalar<real>(m.input), m.input,
+          hwy::BitCastScalar<real>(m.sleef_out), m.sleef_out,
+          hwy::BitCastScalar<real>(m.translate_out), m.translate_out);
       mismatched_nan = true;
       break;
     }
@@ -138,40 +140,63 @@ void FindMismatches(const char *name,
 #if HWY_ONCE
 
 
-#define FIND_MISMATCHES_HELPER(OP) \
-  FindMismatches(#OP, hwy::OP##Translated, hwy::OP##Sleef)
+#define FIND_MISMATCHES_HELPER_SINGLE(OP) \
+  FindMismatches<float>(#OP "f", hwy::OP##Translated, hwy::OP##Sleef)
+
+#define FIND_MISMATCHES_HELPER_DOUBLE(OP) \
+  FindMismatches<float>(#OP "d", hwy::OP##Translated, hwy::OP##Sleef)
 
 int main() {
-  FIND_MISMATCHES_HELPER(Exp);
-  FIND_MISMATCHES_HELPER(Expm1);
-  FIND_MISMATCHES_HELPER(Log);
-  FIND_MISMATCHES_HELPER(Log1p);
-  FIND_MISMATCHES_HELPER(Log2);
+  FIND_MISMATCHES_HELPER_SINGLE(Exp);
+  FIND_MISMATCHES_HELPER_SINGLE(Expm1);
+  FIND_MISMATCHES_HELPER_SINGLE(Log);
+  FIND_MISMATCHES_HELPER_SINGLE(Log1p);
+  FIND_MISMATCHES_HELPER_SINGLE(Log2);
 
-  FIND_MISMATCHES_HELPER(Sin);
-  FIND_MISMATCHES_HELPER(Cos);
-  FIND_MISMATCHES_HELPER(Tan);
-  FIND_MISMATCHES_HELPER(SinFast);
-  FIND_MISMATCHES_HELPER(CosFast);
-  FIND_MISMATCHES_HELPER(TanFast);
+  FIND_MISMATCHES_HELPER_DOUBLE(Exp);
+  FIND_MISMATCHES_HELPER_DOUBLE(Expm1);
+  FIND_MISMATCHES_HELPER_DOUBLE(Log);
+  FIND_MISMATCHES_HELPER_DOUBLE(Log1p);
+  FIND_MISMATCHES_HELPER_DOUBLE(Log2);
 
-  FIND_MISMATCHES_HELPER(Sinh);
-  FIND_MISMATCHES_HELPER(Cosh);
-  FIND_MISMATCHES_HELPER(Tanh);
-  FIND_MISMATCHES_HELPER(SinhFast);
-  FIND_MISMATCHES_HELPER(CoshFast);
-  FIND_MISMATCHES_HELPER(TanhFast);
+  FIND_MISMATCHES_HELPER_SINGLE(Sin);
+  FIND_MISMATCHES_HELPER_SINGLE(Cos);
+  FIND_MISMATCHES_HELPER_SINGLE(Tan);
+  FIND_MISMATCHES_HELPER_SINGLE(SinFast);
+  FIND_MISMATCHES_HELPER_SINGLE(CosFast);
+  FIND_MISMATCHES_HELPER_SINGLE(TanFast);
+
+  FIND_MISMATCHES_HELPER_DOUBLE(Sin);
+  FIND_MISMATCHES_HELPER_DOUBLE(Cos);
+  FIND_MISMATCHES_HELPER_DOUBLE(Tan);
+  FIND_MISMATCHES_HELPER_DOUBLE(SinFast);
+  FIND_MISMATCHES_HELPER_DOUBLE(CosFast);
+  FIND_MISMATCHES_HELPER_DOUBLE(TanFast);
+
+  FIND_MISMATCHES_HELPER_SINGLE(Sinh);
+  FIND_MISMATCHES_HELPER_SINGLE(Cosh);
+  FIND_MISMATCHES_HELPER_SINGLE(Tanh);
+  FIND_MISMATCHES_HELPER_SINGLE(SinhFast);
+  FIND_MISMATCHES_HELPER_SINGLE(CoshFast);
+  FIND_MISMATCHES_HELPER_SINGLE(TanhFast);
+
+  FIND_MISMATCHES_HELPER_DOUBLE(Sinh);
+  FIND_MISMATCHES_HELPER_DOUBLE(Cosh);
+  FIND_MISMATCHES_HELPER_DOUBLE(Tanh);
+  FIND_MISMATCHES_HELPER_DOUBLE(SinhFast);
+  FIND_MISMATCHES_HELPER_DOUBLE(CoshFast);
+  FIND_MISMATCHES_HELPER_DOUBLE(TanhFast);
 
 
-  FIND_MISMATCHES_HELPER(Asin);
-  FIND_MISMATCHES_HELPER(Acos);
-  FIND_MISMATCHES_HELPER(Atan);
-  FIND_MISMATCHES_HELPER(AsinFast);
-  FIND_MISMATCHES_HELPER(AcosFast);
-  FIND_MISMATCHES_HELPER(AtanFast);
+  FIND_MISMATCHES_HELPER_SINGLE(Asin);
+  FIND_MISMATCHES_HELPER_SINGLE(Acos);
+  FIND_MISMATCHES_HELPER_SINGLE(Atan);
+  FIND_MISMATCHES_HELPER_SINGLE(AsinFast);
+  FIND_MISMATCHES_HELPER_SINGLE(AcosFast);
+  FIND_MISMATCHES_HELPER_SINGLE(AtanFast);
 
-  FIND_MISMATCHES_HELPER(Asinh);
-  FIND_MISMATCHES_HELPER(Acosh);
-  FIND_MISMATCHES_HELPER(Atanh);
+  FIND_MISMATCHES_HELPER_SINGLE(Asinh);
+  FIND_MISMATCHES_HELPER_SINGLE(Acosh);
+  FIND_MISMATCHES_HELPER_SINGLE(Atanh);
 }
 #endif
