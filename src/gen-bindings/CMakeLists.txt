@@ -10,26 +10,20 @@ set (Python3_FIND_VIRTUALENV FIRST)
 ## unset Python3_EXECUTABLE because it is also an input variable (see documentation, Artifacts Specification section)
 unset (Python3_EXECUTABLE)
 ## Launch a new search
-find_package (Python3 COMPONENTS Interpreter Development)
+find_package (Python3 COMPONENTS Interpreter)
 
 ## install py-treesitter
-execute_process(COMMAND "${Python3_EXECUTABLE}" -m pip install tree_sitter)
+execute_process(COMMAND "${Python3_EXECUTABLE}" -m pip install tree_sitter tree_sitter_c tree_sitter_cpp)
 
-
-add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/tree-sitter-grammars.so"
-    COMMAND ${Python3_EXECUTABLE} ARGS ${CMAKE_CURRENT_SOURCE_DIR}/treesitter_utils.py ${CMAKE_SOURCE_DIR}/tree-sitter "tree-sitter-grammars.so"
-)
 
 add_custom_command(OUTPUT "sleef-generated.h"
     COMMAND ${Python3_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/translate.py"
         "${sleef_SOURCE_DIR}/src" 
         "${CMAKE_CURRENT_SOURCE_DIR}/rename_data"
-        "${CMAKE_CURRENT_BINARY_DIR}/tree-sitter-grammars.so" 
         sleef-generated.h
     COMMAND cp sleef-generated.h ${CMAKE_SOURCE_DIR}/outputs
     DEPENDS 
         "${CMAKE_CURRENT_SOURCE_DIR}/translate.py"
-        "${CMAKE_CURRENT_BINARY_DIR}/tree-sitter-grammars.so" 
         "${CMAKE_CURRENT_SOURCE_DIR}/rename_data/constant_renames.tsv"
         "${CMAKE_CURRENT_SOURCE_DIR}/rename_data/function_renames.tsv"
         "${CMAKE_CURRENT_SOURCE_DIR}/rename_data/macro_conditionals.tsv"

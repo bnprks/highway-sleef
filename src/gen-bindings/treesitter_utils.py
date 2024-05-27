@@ -2,17 +2,14 @@
 import collections
 
 from tree_sitter import Language, Parser
+import tree_sitter_c as tsc
+import tree_sitter_cpp as tscpp
 
 def main():
     import argparse
     parser = argparse.ArgumentParser(description="Compile treesitter grammars")
     parser.add_argument("src_dir", help="Folder containing tree-sitter grammar repos")
-    parser.add_argument("out_path", help="Path to save dynamic library")
     args = parser.parse_args()
-    Language.build_library(
-        args.out_path,
-        [args.src_dir + "/tree-sitter-c", args.src_dir + "/tree-sitter-cpp"]
-    )
 
 __lib_path = None
 def lib_path():
@@ -22,27 +19,20 @@ def lib_path():
     else:
         return __lib_path
 
-def set_treesitter_lib(lib_path):
-    global __lib_path
-    __lib_path = lib_path
-    # Test that we can load c and cpp from the specified path
-    Language(lib_path, 'c')
-    Language(lib_path, 'cpp')
-
 def c_query(query):
-    return Language(lib_path(), 'c').query(query)
+    return Language(tsc.language()).query(query)
 
 def cpp_query(query):
-    return Language(lib_path(), 'cpp').query(query)
+    return Language(tscpp.language()).query(query)
 
 def c_parse(text):
     parser = Parser()
-    parser.set_language(Language(lib_path(), 'c'))
+    parser.set_language(Language(tsc.language()))
     return parser.parse(text)
 
 def cpp_parse(text):
     parser = Parser()
-    parser.set_language(Language(lib_path(), 'cpp'))
+    parser.set_language(Language(tscpp.language()))
     return parser.parse(text)
 
 def construct_callgraph(root_node):
