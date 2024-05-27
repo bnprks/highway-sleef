@@ -58,8 +58,8 @@ vmin_vf_vf_vf(x, y)	Min(x, y)
 vmax_vd_vd_vd(x, y)	Max(x, y)
 vmin_vd_vd_vd(x, y)	Min(x, y)
 
-vrint_vi2_vf(f)	NearestInt(f) # NOTE: Slower than Sleef due to FixConversionOverflow call
-vrint_vi_vd(f)	ConvertTo(di, Round(f)) # NOTE: Slower than Sleef due to FixConversionOverflow call
+vrint_vi2_vf(f)	NearestIntFast(f) # NOTE: NearestInt was slower than Sleef due to FixConversionOverflow call
+vrint_vi_vd(f)	NearestIntFast(f) # ConvertTo(di, Round(f)) # NOTE: Slower than Sleef due to FixConversionOverflow call
 vrint_vf_vf(f)	Round(f)
 vrintfk2_vf_vf(f)	Round(f)
 vrint_vd_vd(f)	Round(f)

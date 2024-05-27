@@ -27,7 +27,7 @@ foreach(TARGET IN LISTS TEST_TARGETS)
   set_target_properties(${TARGET} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
   target_link_libraries(${TARGET} PUBLIC highway_sleef hwy profiler sleef)
   target_include_directories(${TARGET} PUBLIC "${CMAKE_BINARY_DIR}" "${CMAKE_SOURCE_DIR}")
-  target_compile_options(${TARGET} PUBLIC -ffp-contract=off -Wno-ignored-attributes -march=haswell -maes -O2 -g0)
+  target_compile_options(${TARGET} PUBLIC -ffp-contract=off -Wno-ignored-attributes -march=haswell -maes)
 endforeach()
 
 target_compile_options(mismatch_test PRIVATE -DHWY_IS_TEST=1)
@@ -35,7 +35,8 @@ target_compile_options(mismatch_test PRIVATE -DHWY_IS_TEST=1)
 target_link_libraries(measure_speed PUBLIC benchmark::benchmark)
 
 target_link_libraries(sampling_test PUBLIC hwy_test gtest_main)
-target_compile_options(sampling_test PRIVATE -DHWY_IS_TEST=1)
+target_compile_options(sampling_test PRIVATE -DHWY_IS_TEST=1 -O2 -g0)
 
 include(GoogleTest)
 gtest_discover_tests(sampling_test DISCOVERY_TIMEOUT 60)
+

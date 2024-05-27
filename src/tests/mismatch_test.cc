@@ -58,6 +58,55 @@
 
 #if HWY_ONCE
 
+//#define PI 3.1415926535897932384626433832795028841971693993751L
+#define PI 3.141592653589793238462643383279502884L
+// Copy the approach of boost for now
+template <typename T>
+static T sinpi(T x) {
+    if (x < 0) return -sinpi(-x);
+    if (x < 0.5) return std::sin(PI * x);
+    bool invert = x < 1;
+    if (x < 1) x = -x;
+
+    T rem = std::floor(x);
+    // Invert odd remainders
+    if (std::abs(std::floor(rem/2)*2 - rem) > std::numeric_limits<T>::epsilon()) {
+        invert = !invert;
+    }
+    rem = x - rem;
+    if (rem > 0.5) rem = 1-rem;
+    if (rem == 0.5) return invert ? -1 : 1;
+    T result = std::sin(PI * rem);
+    return invert ? -result : result;
+}
+template <typename T>
+static T cospi(T x) {
+    bool invert = false;
+    if (std::abs(x) < 0.25) return std::cos(PI * x);
+    x = std::abs(x);
+    T rem = std::floor(x);
+    // Invert odd remainders
+    if (std::abs(std::floor(rem/2)*2 - rem) > std::numeric_limits<T>::epsilon()) {
+        invert = !invert;
+    }
+    rem = x - rem;
+    if (rem > 0.5) {
+        rem = 1- rem;
+        invert = !invert;
+    }
+    if (rem == 0.5) {
+        return 0;
+    }
+    if (rem > 0.25) {
+        rem = 0.5 - rem;
+        rem = std::sin(PI * rem);
+    } else {
+        rem = std::cos(PI * rem);
+    }
+    return invert ? -rem : rem;
+}
+#undef PI
+
 int main() {
     // SingleMismatch("log1p", hwy::Log1pSleef, hwy::Log1pTranslated, 0x1.2ced34p+126);
     // SingleMismatch("log1p", hwy::Log1pHwy, hwy::Log1pTranslated, 0x1.2ced34p+126);
@@ -71,19 +120,44 @@ int main() {
     //f64x4: Log max_ulp 1.99786e+17
     //worst_input=3.478743 (0x400bd47719a77412), worst_output=-43.114749 (0xc0458eb014fa1256)
     //double tough_input = 0x1.bd47719a77412p+1;
-    double tough_input = 340282346638528859811704183484516925440.000000;
+
+    // f64x4: SinPi max_ulp 1.09766
+    //     worst_input=0.000000 (0xeee8dd026da3f), worst_output=0.000000 (0x27747426aebefc)
+    // worst output: 0x1.7747426aebefcp-1021
+    // double i1 = -0x1.d95c0ep-126;
+    // double i2 = 0x1.9ed4d6p-125;
+    double tough_input = -1.0;
     // namespace hn = ::hwy::N_AVX2;
     // hn::ScalableTag<double> d;
     // printf("Hwy result SSE4: %a\n", hn::GetLane(hn::sleef::Log(d, hn::Set(d, tough_input))));
 
-    hwy::N_SSE4::ScalableTag<float> davx;
-    printf("Hwy result AVX2: %a\n", hwy::N_SSE4::GetLane(hwy::N_SSE4::sleef::Log1p(davx, hwy::N_SSE4::Set(davx, tough_input))));
-    // for (int i = 0; i < hwy::N_AVX2::Lanes(davx); i++) {
-    //     printf("Hwy result AVX2[%i]: %a\n", i, hwy::N_AVX2::ExtractLane(hwy::N_AVX2::sleef::Log(davx, hwy::N_AVX2::Set(davx, tough_input)), i));
-    // }
+    hwy::N_AVX2::ScalableTag<double> davx2;
+    // printf("Hwy result AVX2: %a\n", hwy::N_AVX2::GetLane(hwy::N_AVX2::sleef::SinPi(davx2, hwy::N_AVX2::Set(davx2, tough_input))));
+    // printf("Hwy result AVX2: %a\n", hwy::N_AVX2::GetLane(hwy::N_AVX2::sleef::Hypot(davx2, hwy::N_AVX2::Set(davx2, i1), hwy::N_AVX2::Set(davx2, i2))));
+    // printf("Hwy result AVX2: %.20g\n", hwy::N_AVX2::GetLane(hwy::N_AVX2::sleef::Hypot(davx2, hwy::N_AVX2::Set(davx2, i1), hwy::N_AVX2::Set(davx2, i2))));
 
-    printf("Sleef scalar result: %a\n", Sleef_log1pf1_u10(tough_input));
-    printf("Sleef vector sse4: %a\n", _mm_cvtss_f32(Sleef_log1pf4_u10sse4(_mm_set1_pd(tough_input))));
-    printf("Correct result: %a\n", std::log1p(tough_input));
+    hwy::N_SSE4::ScalableTag<double> dsse4;
+    printf("Hwy result SSE4: %a\n", hwy::N_SSE4::GetLane(hwy::N_SSE4::sleef::SinPi(dsse4, hwy::N_SSE4::Set(dsse4, tough_input))));
+    // printf("Hwy result SSE4: %a\n", hwy::N_SSE4::GetLane(hwy::N_SSE4::sleef::Hypot(dsse4, hwy::N_SSE4::Set(dsse4, i1), hwy::N_SSE4::Set(dsse4, i2))));
+    // printf("Hwy result SSE4: %.20g\n", hwy::N_SSE4::GetLane(hwy::N_SSE4::sleef::Hypot(dsse4, hwy::N_SSE4::Set(dsse4, i1), hwy::N_SSE4::Set(dsse4, i2))));
+
+
+    // printf("Sleef scalar result: %.20g\n", Sleef_sinpi_u05(tough_input));
+    // printf("Sleef vector avx2: %.20g\n", _mm256_cvtsd_f64(Sleef_sinpid4_u05avx2(_mm256_set1_pd(tough_input))));
+    printf("Sleef vector sse4: %.20g\n", _mm_cvtsd_f64(Sleef_sinpid2_u05sse4(_mm_set1_pd(tough_input))));
+    printf("Correct result: %.20Lg\n", sinpi((long double) tough_input));
+    printf("Correct result (double): %.20g\n", (double) sinpi((long double) tough_input));
+    printf("Correct result (double): %a\n", (double) sinpi((long double) tough_input));
+
+    //printf("Sleef scalar result: %.20g\n", Sleef_powd1_u10(i1, i2));
+    // printf("Sleef vector avx2: %.20g\n", _mm256_cvtsd_f64(Sleef_powd4_u10avx2(_mm256_set1_pd(i1), _mm256_set1_pd(i2))));
+    // printf("Sleef vector sse4: %.20g\n", _mm_cvtsd_f64(Sleef_powd2_u10sse4(_mm_set1_pd(i1), _mm_set1_pd(i2))));
+    // printf("Sleef vector avx2: %.20g\n", _mm256_cvtss_f32(Sleef_powf8_u10avx2(_mm256_set1_ps(i1), _mm256_set1_ps(i2))));
+    // printf("Sleef vector avx2: %a\n", _mm256_cvtss_f32(Sleef_hypotf8_u05avx2(_mm256_set1_ps(i1), _mm256_set1_ps(i2))));
+    // printf("Sleef vector sse4: %.20g\n", _mm_cvtss_f32(Sleef_hypotf4_u05sse4(_mm_set1_ps(i1), _mm_set1_ps(i2))));
+    //printf("Sleef vector sse4: %.20g\n", _mm_cvtss_f32(Sleef_tgammaf4_u10sse4(_mm_set1_ps(tough_input))));
+    // printf("Correct result: %.20Lg\n", std::hypot((long double) i1, (long double) i2));
+    // printf("Correct result (double): %.20g\n", (double) std::hypot((long double) i1, (long double) i2));
+    // printf("Correct result (double): %a\n", (double) std::hypot((long double) i1, (long double) i2));
 }
 #endif

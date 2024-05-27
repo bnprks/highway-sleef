@@ -877,7 +877,7 @@ FILE_TEMPLATE = textwrap.dedent(
 #include <type_traits>
 #include "hwy/highway.h"
 #include "Estrin.h"
-#include "AVX512FloatUtils.h"
+#include "ExtraHwyOps.h"
 
 extern const float PayneHanekReductionTable_float[];
 extern const double PayneHanekReductionTable_double[];

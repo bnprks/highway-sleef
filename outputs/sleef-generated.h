@@ -23,7 +23,7 @@
 #include <type_traits>
 #include "hwy/highway.h"
 #include "Estrin.h"
-#include "AVX512FloatUtils.h"
+#include "ExtraHwyOps.h"
 
 extern const float PayneHanekReductionTable_float[];
 extern const double PayneHanekReductionTable_double[];
@@ -862,7 +862,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) ExpDF(const D df, Vec2<D> d) {
   RebindToUnsigned<D> du;
   
   Vec<D> u = Mul(Add(Get2<0>(d), Get2<1>(d)), Set(df, OneOverLn2_f));
-  Vec<RebindToSigned<D>> q = NearestInt(u);
+  Vec<RebindToSigned<D>> q = NearestIntFast(u);
   Vec2<D> s, t;
 
   s = AddDF(df, d, Mul(ConvertTo(df, q), Set(df, -Ln2Hi_f)));
@@ -1103,7 +1103,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) ExpDF_float(const D df, Vec2<D> d) {
   RebindToUnsigned<D> du;
   
   Vec<D> u = Mul(Add(Get2<0>(d), Get2<1>(d)), Set(df, OneOverLn2_f));
-  Vec<RebindToSigned<D>> q = NearestInt(u);
+  Vec<RebindToSigned<D>> q = NearestIntFast(u);
   Vec2<D> s, t;
 
   s = AddDF(df, d, Mul(ConvertTo(df, q), Set(df, -Ln2Hi_f)));
@@ -1311,8 +1311,8 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) IfThenElse(const D df, Mask<D> o, floa
 // Translated from libm/sleefsimdsp.c:3251 sinpifk
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinPiDF(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, s, t;
@@ -1354,8 +1354,8 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinPiDF(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:3301 cospifk
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) CosPiDF(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, s, t;
@@ -1442,8 +1442,8 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) NegDF(const D df, Vec2<D> x) {
 // Translated from libm/sleefsimdsp.c:1872 atan2kf_u1
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) ATan2DF(const D df, Vec2<D> y, Vec2<D> x) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> u;
   Vec2<D> s, t;
@@ -1527,7 +1527,7 @@ template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Expm1Fast(const D df, Vec<D> d) {
   RebindToSigned<D> di;
   
-  Vec<RebindToSigned<D>> q = NearestInt(Mul(d, Set(df, OneOverLn2_f)));
+  Vec<RebindToSigned<D>> q = NearestIntFast(Mul(d, Set(df, OneOverLn2_f)));
   Vec<D> s, u;
 
   s = MulAdd(ConvertTo(df, q), Set(df, -Ln2Hi_f), d);
@@ -1554,7 +1554,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) LogFastDF(const D df, Vec2<D> d) {
 #if !(HWY_ARCH_X86 && HWY_TARGET <= HWY_AVX3)
   e = ILogB1(df, Mul(Get2<0>(d), Set(df, 1.0f/0.75f)));
 #else
-  e = NearestInt(GetExponent(Mul(Get2<0>(d), Set(df, 1.0f/0.75f))));
+  e = NearestIntFast(GetExponent(Mul(Get2<0>(d), Set(df, 1.0f/0.75f))));
 #endif
   m = ScaleDF(df, d, Pow2I(df, Neg(e)));
 
@@ -1735,7 +1735,7 @@ template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) ExpFast(const D df, Vec<D> d) {
   RebindToUnsigned<D> du;
   
-  Vec<RebindToSigned<D>> q = NearestInt(Mul(d, Set(df, OneOverLn2_f)));
+  Vec<RebindToSigned<D>> q = NearestIntFast(Mul(d, Set(df, OneOverLn2_f)));
   Vec<D> s, u;
 
   s = MulAdd(ConvertTo(df, q), Set(df, -Ln2Hi_f), d);
@@ -1960,12 +1960,11 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SquareDD(const D df, Vec2<D> x) {
 // Translated from libm/sleefsimddp.c:2397 expk2
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) ExpDD(const D df, Vec2<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
   
   Vec<D> u = Mul(Add(Get2<0>(d), Get2<1>(d)), Set(df, OneOverLn2_d));
   Vec<D> dq = Round(u);
-  Vec<RebindToSigned<D>> q = ConvertTo(di, Round(dq));
+  Vec<RebindToSigned<D>> q = NearestIntFast(dq);
   Vec2<D> s, t;
 
   s = AddDD(df, d, Mul(dq, Set(df, -Ln2Hi_d)));
@@ -2178,12 +2177,11 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SqrtDD(const D df, Vec2<D> d) {
 // Translated from libm/sleefsimddp.c:2322 expk
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) ExpDD_double(const D df, Vec2<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
   
   Vec<D> u = Mul(Add(Get2<0>(d), Get2<1>(d)), Set(df, OneOverLn2_d));
   Vec<D> dq = Round(u);
-  Vec<RebindToSigned<D>> q = ConvertTo(di, Round(dq));
+  Vec<RebindToSigned<D>> q = NearestIntFast(dq);
   Vec2<D> s, t;
 
   s = AddDD(df, d, Mul(dq, Set(df, -Ln2Hi_d)));
@@ -2310,8 +2308,8 @@ Vec<D> y = Round(Mul(x, Set(df, 4)));
 // Translated from libm/sleefsimddp.c:348 rempi
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec3<D>) PayneHanekReduction(const D df, Vec<D> a) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec2<D> x, y;
   Vec<RebindToSigned<D>> ex = ILogB2(df, a);
@@ -2402,8 +2400,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<RebindToSigned<D>>) IfNegThenElseZero(cons
 // Translated from libm/sleefsimddp.c:1835 atan2k_u1
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) ATan2DD(const D df, Vec2<D> y, Vec2<D> x) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> u;
   Vec2<D> s, t;
@@ -2502,8 +2500,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) IfThenElse(const D df, Mask<D> o, dou
 // Translated from libm/sleefsimddp.c:1416 sinpik
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinPiDD(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, s, t;
@@ -2548,8 +2546,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinPiDD(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:1467 cospik
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) CosPiDD(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, s, t;
@@ -2620,7 +2618,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Expm1Fast(const D df, Vec<D> d) {
   RebindToSigned<D> di;
   
   Vec<D> u = Round(Mul(d, Set(df, OneOverLn2_d))), s;
-  Vec<RebindToSigned<D>> q = ConvertTo(di, Round(u));
+  Vec<RebindToSigned<D>> q = NearestIntFast(u);
 
   s = MulAdd(u, Set(df, -Ln2Hi_d), d);
   s = MulAdd(u, Set(df, -Ln2Lo_d), s);
@@ -2796,8 +2794,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Toward0(const D df, Vec<D> x) {
 // Translated from common/commonfuncs.h:337 vldexp_vd_vd_vi
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) LoadExp(const D df, Vec<D> x, Vec<RebindToSigned<D>> q) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<RebindToSigned<D>> m = ShiftRight<63>(q);
   m = ShiftLeft<7>(Sub(ShiftRight<9>(Add(m, q)), m));
@@ -2827,7 +2825,7 @@ template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Exp(const D df, Vec<D> d) {
   RebindToUnsigned<D> du;
   
-  Vec<RebindToSigned<D>> q = NearestInt(Mul(d, Set(df, OneOverLn2_f)));
+  Vec<RebindToSigned<D>> q = NearestIntFast(Mul(d, Set(df, OneOverLn2_f)));
   Vec<D> s, u;
 
   s = MulAdd(ConvertTo(df, q), Set(df, -Ln2Hi_f), d);
@@ -2857,7 +2855,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Exp2(const D df, Vec<D> d) {
   RebindToUnsigned<D> du;
   
   Vec<D> u = Round(d), s;
-  Vec<RebindToSigned<D>> q = NearestInt(u);
+  Vec<RebindToSigned<D>> q = NearestIntFast(u);
 
   s = Sub(d, u);
 
@@ -2889,7 +2887,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Exp10(const D df, Vec<D> d) {
   RebindToUnsigned<D> du;
   
   Vec<D> u = Round(Mul(d, Set(df, Lg10))), s;
-  Vec<RebindToSigned<D>> q = NearestInt(u);
+  Vec<RebindToSigned<D>> q = NearestIntFast(u);
 
   s = MulAdd(u, Set(df, -Log10Of2_Hi_f), d);
   s = MulAdd(u, Set(df, -Log10Of2_Lo_f), s);
@@ -3116,8 +3114,8 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Log2(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:2842 xlog1pf
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Log1p(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec2<D> x;
   Vec<D> t, m, x2;
@@ -3135,7 +3133,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Log1p(const D df, Vec<D> d) {
 #else
   Vec<D> e = GetExponent(Mul(dp1, Set(df, 1.0f/0.75f)));
   e = IfThenElse(Eq(e, Inf(df)), Set(df, 128.0f), e);
-  t = LoadExp3(df, Set(df, 1), Neg(NearestInt(e)));
+  t = LoadExp3(df, Set(df, 1), Neg(NearestIntFast(e)));
   m = MulAdd(d, t, Sub(t, Set(df, 1)));
   Vec2<D> s = MulDF(df, Create2(df, Set(df, 0.69314718246459960938f), Set(df, -1.904654323148236017e-09f)), e);
 #endif
@@ -3237,8 +3235,8 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Sqrt(const D df, Vec<D> d) {
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) SqrtFast(const D df, Vec<D> d) {
 #if HWY_ARCH_ARM && HWY_TARGET >= HWY_NEON
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> e = BitCast(df, Add(Set(di, 0x20000000), And(Set(di, 0x7f000000), BitCast(di, ShiftRight<1>(BitCast(du, d))))));
   Vec<D> m = BitCast(df, Add(Set(di, 0x3f000000), And(Set(di, 0x01ffffff), BitCast(di, d))));
@@ -3410,8 +3408,8 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) HypotFast(const D df, Vec<D> x, Vec<D> 
 // Translated from libm/sleefsimdsp.c:2360 xpowf
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Pow(const D df, Vec<D> x, Vec<D> y) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
 Mask<D> yisint = Or(Eq(Trunc(y), y), Gt(Abs(y), Set(df, 1 << 24)));
   Mask<D> yisodd = And(And(RebindMask(df, Eq(And(ConvertTo(di, y), Set(di, 1)), Set(di, 1))), yisint), Lt(Abs(y), Set(df, 1 << 24)));
@@ -3445,15 +3443,15 @@ Mask<D> yisint = Or(Eq(Trunc(y), y), Gt(Abs(y), Set(df, 1 << 24)));
 // Translated from libm/sleefsimdsp.c:969 xsinf_u1
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Sin(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<RebindToSigned<D>> q;
   Vec<D> u, v;
   Vec2<D> s, t, x;
 
   u = Round(Mul(d, Set(df, OneOverPi)));
-  q = NearestInt(u);
+  q = NearestIntFast(u);
   v = MulAdd(u, Set(df, -PiA2f), d);
   s = AddDF(df, v, Mul(u, Set(df, -PiB2f)));
   s = AddFastDF(df, s, Mul(u, Set(df, -PiC2f)));
@@ -3498,15 +3496,15 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Sin(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:1067 xcosf_u1
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Cos(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<RebindToSigned<D>> q;
   Vec<D> u;
   Vec2<D> s, t, x;
 
   Vec<D> dq = MulAdd(Round(MulAdd(d, Set(df, OneOverPi), Set(df, -0.5f))), Set(df, 2), Set(df, 1));
-  q = NearestInt(dq);
+  q = NearestIntFast(dq);
   s = AddDF(df, d, Mul(dq, Set(df, -PiA2f*0.5f)));
   s = AddDF(df, s, Mul(dq, Set(df, -PiB2f*0.5f)));
   s = AddDF(df, s, Mul(dq, Set(df, -PiC2f*0.5f)));
@@ -3559,7 +3557,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Tan(const D df, Vec<D> d) {
   Mask<D> o;
 
   u = Round(Mul(d, Set(df, 2 * OneOverPi)));
-  q = NearestInt(u);
+  q = NearestIntFast(u);
   v = MulAdd(u, Set(df, -PiA2f*0.5f), d);
   s = AddDF(df, v, Mul(u, Set(df, -PiB2f*0.5f)));
   s = AddFastDF(df, s, Mul(u, Set(df, -PiC2f*0.5f)));
@@ -3607,13 +3605,13 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) Tan(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:630 xsinf
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) SinFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<RebindToSigned<D>> q;
   Vec<D> u, s, r = d;
 
-  q = NearestInt(Mul(d, Set(df, (float)OneOverPi)));
+  q = NearestIntFast(Mul(d, Set(df, (float)OneOverPi)));
   u = ConvertTo(df, q);
   d = MulAdd(u, Set(df, -PiA2f), d);
   d = MulAdd(u, Set(df, -PiB2f), d);
@@ -3668,13 +3666,13 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) SinFast(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:736 xcosf
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) CosFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<RebindToSigned<D>> q;
   Vec<D> u, s, r = d;
 
-  q = NearestInt(Sub(Mul(d, Set(df, (float)OneOverPi)), Set(df, 0.5f)));
+  q = NearestIntFast(Sub(Mul(d, Set(df, (float)OneOverPi)), Set(df, 0.5f)));
   q = Add(Add(q, q), Set(di, 1));
   u = ConvertTo(df, q);
   d = MulAdd(u, Set(df, -PiA2f*0.5f), d);
@@ -3729,14 +3727,14 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) CosFast(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:845 xtanf
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) TanFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<RebindToSigned<D>> q;
   Mask<D> o;
   Vec<D> u, s, x;
 
-  q = NearestInt(Mul(d, Set(df, (float)(2 * OneOverPi))));
+  q = NearestIntFast(Mul(d, Set(df, (float)(2 * OneOverPi))));
   u = ConvertTo(df, q);
   x = MulAdd(u, Set(df, -PiA2f*0.5f), d);
   x = MulAdd(u, Set(df, -PiB2f*0.5f), x);
@@ -3744,7 +3742,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) TanFast(const D df, Vec<D> d) {
   Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2f*0.5f));
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
-    Vec<RebindToSigned<D>> q2 = NearestInt(Mul(d, Set(df, (float)(2 * OneOverPi))));
+    Vec<RebindToSigned<D>> q2 = NearestIntFast(Mul(d, Set(df, (float)(2 * OneOverPi))));
     s = ConvertTo(df, q);
     u = MulAdd(s, Set(df, -PiAf*0.5f), d);
     u = MulAdd(s, Set(df, -PiBf*0.5f), u);
@@ -3802,7 +3800,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinCos(const D df, Vec<D> d) {
   Vec2<D> r, s, t, x;
 
   u = Round(Mul(d, Set(df, 2 * OneOverPi)));
-  q = NearestInt(u);
+  q = NearestIntFast(u);
   v = MulAdd(u, Set(df, -PiA2f*0.5f), d);
   s = AddDF(df, v, Mul(u, Set(df, -PiB2f*0.5f)));
   s = AddFastDF(df, s, Mul(u, Set(df, -PiC2f*0.5f)));
@@ -3857,15 +3855,15 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinCos(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:1233 XSINCOSF
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinCosFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<RebindToSigned<D>> q;
   Mask<D> o;
   Vec<D> u, s, t, rx, ry;
   Vec2<D> r;
 
-  q = NearestInt(Mul(d, Set(df, (float)TwoOverPi)));
+  q = NearestIntFast(Mul(d, Set(df, (float)TwoOverPi)));
   u = ConvertTo(df, q);
   s = MulAdd(u, Set(df, -PiA2f*0.5f), d);
   s = MulAdd(u, Set(df, -PiB2f*0.5f), s);
@@ -3873,7 +3871,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinCosFast(const D df, Vec<D> d) {
   Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2f));
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
-    Vec<RebindToSigned<D>> q2 = NearestInt(Mul(d, Set(df, (float)TwoOverPi)));
+    Vec<RebindToSigned<D>> q2 = NearestIntFast(Mul(d, Set(df, (float)TwoOverPi)));
     u = ConvertTo(df, q2);
     t = MulAdd(u, Set(df, -PiAf*0.5f), d);
     t = MulAdd(u, Set(df, -PiBf*0.5f), t);
@@ -3929,8 +3927,8 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinCosFast(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:1477 XSINCOSPIF_U05
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinCosPi(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, s, t, rx, ry;
@@ -3995,8 +3993,8 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinCosPi(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:1537 XSINCOSPIF_U35
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec2<D>) SinCosPiFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, s, t, rx, ry;
@@ -4178,8 +4176,8 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) AcosFast(const D df, Vec<D> d) {
 // Translated from libm/sleefsimdsp.c:1743 xatanf
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) AtanFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> s, t, u;
   Vec<RebindToSigned<D>> q;
@@ -4715,7 +4713,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) SinFaster(const D df, Vec<D> d) {
 
   s = Mul(d, Set(df, (float)OneOverPi));
   u = Round(s);
-  q = NearestInt(s);
+  q = NearestIntFast(s);
   d = MulAdd(u, Set(df, -(float)Pi), d);
 
   s = Mul(d, d);
@@ -4745,7 +4743,7 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) CosFaster(const D df, Vec<D> d) {
 
   s = MulAdd(d, Set(df, (float)OneOverPi), Set(df, -0.5f));
   u = Round(s);
-  q = NearestInt(s);
+  q = NearestIntFast(s);
   d = MulAdd(u, Set(df, -(float)Pi), Sub(d, Set(df, (float)Pi * 0.5f)));
 
   s = Mul(d, d);
@@ -4785,11 +4783,10 @@ HWY_INLINE HWY_SLEEF_IF_FLOAT(D, Vec<D>) PowFaster(const D df, Vec<D> x, Vec<D> 
 // Translated from libm/sleefsimddp.c:2146 xexp
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Exp(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
   
   Vec<D> u = Round(Mul(d, Set(df, OneOverLn2_d))), s;
-  Vec<RebindToSigned<D>> q = ConvertTo(di, Round(u));
+  Vec<RebindToSigned<D>> q = NearestIntFast(u);
 
   s = MulAdd(u, Set(df, -Ln2Hi_d), d);
   s = MulAdd(u, Set(df, -Ln2Lo_d), s);
@@ -4820,11 +4817,10 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Exp(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:2686 xexp2
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Exp2(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
   
   Vec<D> u = Round(d), s;
-  Vec<RebindToSigned<D>> q = ConvertTo(di, Round(u));
+  Vec<RebindToSigned<D>> q = NearestIntFast(u);
 
   s = Sub(d, u);
 
@@ -4850,11 +4846,10 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Exp2(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:2750 xexp10
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Exp10(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
   
   Vec<D> u = Round(Mul(d, Set(df, Lg10))), s;
-  Vec<RebindToSigned<D>> q = ConvertTo(di, Round(u));
+  Vec<RebindToSigned<D>> q = NearestIntFast(u);
 
   s = MulAdd(u, Set(df, -Log10Of2_Hi_d), d);
   s = MulAdd(u, Set(df, -Log10Of2_Lo_d), s);
@@ -5111,7 +5106,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Log1p(const D df, Vec<D> d) {
 #else
   Vec<D> e = GetExponent(Mul(dp1, Set(df, 1.0/0.75)));
   e = IfThenElse(Eq(e, Inf(df)), Set(df, 1024.0), e);
-  t = LoadExp3(df, Set(df, 1), Neg(ConvertTo(di, Round(e))));
+  t = LoadExp3(df, Set(df, 1), Neg(NearestIntFast(e)));
   m = MulAdd(d, t, Sub(t, Set(df, 1)));
   Vec2<D> s = MulDD(df, Create2(df, Set(df, 0.693147180559945286226764), Set(df, 2.319046813846299558417771e-17)), e);
 #endif
@@ -5397,8 +5392,8 @@ Mask<D> yisint = IsInt(df, y);
 // Translated from libm/sleefsimddp.c:521 xsin_u1
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Sin(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> u;
   Vec2<D> s, t, x;
@@ -5406,7 +5401,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Sin(const D df, Vec<D> d) {
 
   Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
   Vec<D> dql = Round(Mul(d, Set(df, OneOverPi)));
-  ql = ConvertTo(di, Round(dql));
+  ql = NearestIntFast(dql);
   u = MulAdd(dql, Set(df, -PiA2), d);
   x = AddFastDD(df, u, Mul(dql, Set(df, -PiB2)));
 
@@ -5423,7 +5418,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Sin(const D df, Vec<D> d) {
     s = AddDD(df, s, Mul(dql, Set(df, -PiC)));
     s = AddFastDD(df, s, Mul(Add(dqh, dql), Set(df, -PiD)));
 
-    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    ql = IfThenElse(RebindMask(di, g), ql, NearestIntFast(dql));
     x = IfThenElse(df, g, x, s);
     g = Lt(Abs(d), Set(df, TrigRangeMax));
 
@@ -5464,8 +5459,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Sin(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:787 xcos_u1
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Cos(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> u;
   Vec2<D> s, t, x;
@@ -5474,13 +5469,13 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Cos(const D df, Vec<D> d) {
   Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
   Vec<D> dql = Round(MulAdd(d, Set(df, OneOverPi), Set(df, -0.5)));
   dql = MulAdd(Set(df, 2), dql, Set(df, 1));
-  ql = ConvertTo(di, Round(dql));
+  ql = NearestIntFast(dql);
   x = AddDD(df, d, Mul(dql, Set(df, -PiA2*0.5)));
   x = AddFastDD(df, x, Mul(dql, Set(df, -PiB2*0.5)));
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
     Vec<D> dqh = Trunc(MulAdd(d, Set(df, OneOverPi / (1 << 23)), Set(df, -OneOverPi / (1 << 24))));
-    Vec<RebindToSigned<D>> ql2 = ConvertTo(di, Round(Add(Mul(d, Set(df, OneOverPi)), MulAdd(dqh, Set(df, -(1 << 23)), Set(df, -0.5)))));
+    Vec<RebindToSigned<D>> ql2 = NearestIntFast(Add(Mul(d, Set(df, OneOverPi)), MulAdd(dqh, Set(df, -(1 << 23)), Set(df, -0.5))));
     dqh = Mul(dqh, Set(df, 1 << 24));
     ql2 = Add(Add(ql2, ql2), Set(di, 1));
     const Vec<D> dql = ConvertTo(df, ql2);
@@ -5533,8 +5528,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Cos(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:1645 xtan_u1
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Tan(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> u;
   Vec2<D> s, t, x, y;
@@ -5542,7 +5537,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Tan(const D df, Vec<D> d) {
   Vec<RebindToSigned<D>> ql;
   
   const Vec<D> dql = Round(Mul(d, Set(df, 2 * OneOverPi)));
-  ql = ConvertTo(di, Round(dql));
+  ql = NearestIntFast(dql);
   u = MulAdd(dql, Set(df, -PiA2*0.5), d);
   s = AddFastDD(df, u, Mul(dql, Set(df, -PiB2*0.5)));
   Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
@@ -5562,7 +5557,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Tan(const D df, Vec<D> d) {
     x = AddDD(df, x, Mul(dql, Set(df, -PiC*0.5)));
     x = AddFastDD(df, x, Mul(Add(dqh, dql), Set(df, -PiD*0.5)));
 
-    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    ql = IfThenElse(RebindMask(di, g), ql, NearestIntFast(dql));
     s = IfThenElse(df, g, s, x);
     g = Lt(Abs(d), Set(df, TrigRangeMax));
 
@@ -5606,8 +5601,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Tan(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:382 xsin
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) SinFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
 // This is the deterministic implementation of sin function. Returned
 // values from deterministic functions are bitwise consistent across
@@ -5618,7 +5613,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) SinFast(const D df, Vec<D> d) {
   Vec<RebindToSigned<D>> ql;
 
   Vec<D> dql = Round(Mul(d, Set(df, OneOverPi)));
-  ql = ConvertTo(di, Round(dql));
+  ql = NearestIntFast(dql);
   d = MulAdd(dql, Set(df, -PiA2), d);
   d = MulAdd(dql, Set(df, -PiB2), d);
   Mask<D> g = Lt(Abs(r), Set(df, TrigRangeMax2));
@@ -5636,7 +5631,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) SinFast(const D df, Vec<D> d) {
     u = MulAdd(dql, Set(df, -PiC), u);
     u = MulAdd(Add(dqh, dql), Set(df, -PiD), u);
 
-    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    ql = IfThenElse(RebindMask(di, g), ql, NearestIntFast(dql));
     d = IfThenElse(g, d, u);
     g = Lt(Abs(r), Set(df, TrigRangeMax));
 
@@ -5675,21 +5670,21 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) SinFast(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:652 xcos
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) CosFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> u, s, r = d;
   Vec<RebindToSigned<D>> ql;
 
   Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
   Vec<D> dql = MulAdd(Set(df, 2), Round(MulAdd(d, Set(df, OneOverPi), Set(df, -0.5))), Set(df, 1));
-  ql = ConvertTo(di, Round(dql));
+  ql = NearestIntFast(dql);
   d = MulAdd(dql, Set(df, -PiA2 * 0.5), d);
   d = MulAdd(dql, Set(df, -PiB2 * 0.5), d);
 
   if (!HWY_LIKELY(AllTrue(df, g))) {
     Vec<D> dqh = Trunc(MulAdd(r, Set(df, OneOverPi / (1 << 23)), Set(df, -OneOverPi / (1 << 24))));
-    Vec<RebindToSigned<D>> ql2 = ConvertTo(di, Round(Add(Mul(r, Set(df, OneOverPi)), MulAdd(dqh, Set(df, -(1 << 23)), Set(df, -0.5)))));
+    Vec<RebindToSigned<D>> ql2 = NearestIntFast(Add(Mul(r, Set(df, OneOverPi)), MulAdd(dqh, Set(df, -(1 << 23)), Set(df, -0.5))));
     dqh = Mul(dqh, Set(df, 1 << 24));
     ql2 = Add(Add(ql2, ql2), Set(di, 1));
     Vec<D> dql = ConvertTo(df, ql2);
@@ -5740,15 +5735,15 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) CosFast(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:1517 xtan
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) TanFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> u, s, x, y;
   Mask<D> o;
   Vec<RebindToSigned<D>> ql;
 
   Vec<D> dql = Round(Mul(d, Set(df, 2 * OneOverPi)));
-  ql = ConvertTo(di, Round(dql));
+  ql = NearestIntFast(dql);
   s = MulAdd(dql, Set(df, -PiA2 * 0.5), d);
   s = MulAdd(dql, Set(df, -PiB2 * 0.5), s);
   Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
@@ -5766,7 +5761,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) TanFast(const D df, Vec<D> d) {
     u = MulAdd(dql, Set(df, -PiC * 0.5), u);
     u = MulAdd(Add(dqh, dql), Set(df, -PiD * 0.5), u);
 
-    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    ql = IfThenElse(RebindMask(di, g), ql, NearestIntFast(dql));
     s = IfThenElse(g, s, u);
     g = Lt(Abs(d), Set(df, 1e+6));
 
@@ -5898,8 +5893,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) AsinFast(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:2049 xatan
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) AtanFast(const D df, Vec<D> s) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Vec<D> t, u;
   Vec<RebindToSigned<D>> q;
@@ -5969,8 +5964,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<D>) Atan2Fast(const D df, Vec<D> y, Vec<D>
 // Translated from libm/sleefsimddp.c:1086 XSINCOS_U1
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCos(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, rx, ry;
@@ -5978,7 +5973,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCos(const D df, Vec<D> d) {
   Vec<RebindToSigned<D>> ql;
   
   const Vec<D> dql = Round(Mul(d, Set(df, 2 * OneOverPi)));
-  ql = ConvertTo(di, Round(dql));
+  ql = NearestIntFast(dql);
   u = MulAdd(dql, Set(df, -PiA2*0.5), d);
   s = AddFastDD(df, u, Mul(dql, Set(df, -PiB2*0.5)));
   Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
@@ -5996,7 +5991,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCos(const D df, Vec<D> d) {
     x = AddDD(df, x, Mul(dql, Set(df, -PiC*0.5)));
     x = AddFastDD(df, x, Mul(Add(dqh, dql), Set(df, -PiD*0.5)));
 
-    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    ql = IfThenElse(RebindMask(di, g), ql, NearestIntFast(dql));
     s = IfThenElse(df, g, s, x);
     g = Lt(Abs(d), Set(df, TrigRangeMax));
 
@@ -6057,8 +6052,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCos(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:942 XSINCOS
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCosFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, t, rx, ry, s = d;
@@ -6066,7 +6061,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCosFast(const D df, Vec<D> d) {
   Vec<RebindToSigned<D>> ql;
 
   Vec<D> dql = Round(Mul(s, Set(df, 2 * OneOverPi)));
-  ql = ConvertTo(di, Round(dql));
+  ql = NearestIntFast(dql);
   s = MulAdd(dql, Set(df, -PiA2 * 0.5), s);
   s = MulAdd(dql, Set(df, -PiB2 * 0.5), s);
   Mask<D> g = Lt(Abs(d), Set(df, TrigRangeMax2));
@@ -6084,7 +6079,7 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCosFast(const D df, Vec<D> d) {
     u = MulAdd(dql, Set(df, -PiC * 0.5), u);
     u = MulAdd(Add(dqh, dql), Set(df, -PiD * 0.5), u);
 
-    ql = IfThenElse(RebindMask(di, g), ql, ConvertTo(di, Round(dql)));
+    ql = IfThenElse(RebindMask(di, g), ql, NearestIntFast(dql));
     s = IfThenElse(g, s, u);
     g = Lt(Abs(d), Set(df, TrigRangeMax));
 
@@ -6138,8 +6133,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCosFast(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:1245 XSINCOSPI_U05
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCosPi(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, s, t, rx, ry;
@@ -6210,8 +6205,8 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCosPi(const D df, Vec<D> d) {
 // Translated from libm/sleefsimddp.c:1311 XSINCOSPI_U35
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec2<D>) SinCosPiFast(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
   RebindToUnsigned<D> du;
+  RebindToSigned<D> di;
   
   Mask<D> o;
   Vec<D> u, s, t, rx, ry;
@@ -6721,13 +6716,11 @@ HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<RebindToSigned<D>>) ExpFrexp(const D df, V
 // Translated from libm/sleefsimddp.c:340 xilogb
 template<class D>
 HWY_INLINE HWY_SLEEF_IF_DOUBLE(D, Vec<RebindToSigned<D>>) ILogB(const D df, Vec<D> d) {
-  RebindToSigned<D> di;
-  
   Vec<D> e = ConvertTo(df, ILogB1(df, Abs(d)));
   e = IfThenElse(Eq(d, Set(df, 0)), Set(df, ILogB0), e);
   e = IfThenElse(IsNaN(d), Set(df, ILogBNan), e);
   e = IfThenElse(IsInf(d), Set(df, IntMax), e);
-  return ConvertTo(di, Round(e));
+  return NearestIntFast(e);
 }
 
 // Decompose x into an integer and fractional part
