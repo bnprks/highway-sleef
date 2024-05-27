@@ -13,7 +13,7 @@ unset (Python3_EXECUTABLE)
 find_package (Python3 COMPONENTS Interpreter)
 
 ## install py-treesitter
-execute_process(COMMAND "${Python3_EXECUTABLE}" -m pip install tree_sitter pip tree_sitter_c tree_sitter_cpp)
+execute_process(COMMAND "${Python3_EXECUTABLE}" -m pip install tree_sitter tree_sitter_c tree_sitter_cpp)
 
 
 add_custom_command(OUTPUT "sleef-generated.h"
